@@ -13,18 +13,18 @@ Every frame, update the tweener.
 ### Tweening
 Tweening properties is done with a call to Tween. Pass the object to tween, an [anonymous type][1] instance containing value names and target values, and a duration, with an optional delay.
 
-    :::actionscript
+    :::csharp
     Glide.Tween(target, new { X = destination.X, Y = destination.Y }, duration, delay);
 
 You can also use Glide to set up timed callbacks.
 
-    :::actionscript
+    :::csharp
     Glide.Timer(duration, delay).OnComplete(CompleteCallback);
 
 ### Control
 Control functions accept any number of objects. If no parameters are passed, the call will affect every target in the tweener.
 
-    :::actionscript
+    :::csharp
     Glide.Cancel();
     Glide.Cancel(MyObject);
     Glide.CancelAndComplete(ObjectA, ObjectB);
@@ -39,7 +39,7 @@ Control functions accept any number of objects. If no parameters are passed, the
 ### Behavior
 You can specify a number of special behaviors for a tween to use. Calls can be chained for setting more than one at a time.
 
-    :::actionscript
+    :::csharp
 	//  Glide comes with a full complement of easing functions
     Glide.Tween(...).Ease(Ease.ElasticOut);
     
