@@ -2,8 +2,7 @@ Glide is a super-simple tweening library for C#.
 
 # Installation
  1. Copy Glide.cs, GlideInfo.cs, and Ease.cs into your project folder.
- 2. Add Fasterflect.dll to your project references.
- 3. There is no step three.
+ 2. There is no step two.
 
 # Use
 Every frame, update the tweener.

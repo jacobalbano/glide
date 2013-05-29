@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using Fasterflect;
 
 namespace GlideTween
 {
@@ -48,12 +47,15 @@ namespace GlideTween
 			
 			var type = obj.GetType();
 			
-			field = type.Field(property);
-			prop = type.Property(property);
+			field = type.GetField(property);
+			prop = type.GetProperty(property);
+			
+//			field = type.Field(property);
+//			prop = type.Property(property);
 			
 			if (field != null)	//	Using a field
 			{
-				typeCode = Type.GetTypeCode(obj.GetFieldValue(property).GetType());
+				typeCode = Type.GetTypeCode(field.GetValue(obj).GetType());
 			}
 			else if (prop != null)	//	Using a property
 			{
@@ -67,7 +69,7 @@ namespace GlideTween
 					throw new Exception(string.Format("Property '{0}' on object of type {1} has no getter accessor.", prop, type.FullName));
 				}
 				
-				typeCode = Type.GetTypeCode(obj.GetPropertyValue(property).GetType());
+				typeCode = Type.GetTypeCode(prop.GetValue(obj, null).GetType());
 			}
 			else
 			{
