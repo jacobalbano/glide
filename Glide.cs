@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace Glide
+namespace GlideTween
 {
 	public class Glide
 	{

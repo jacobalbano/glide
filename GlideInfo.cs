@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Fasterflect;
 
-namespace Glide
+namespace GlideTween
 {
 	internal class GlideInfo
 	{

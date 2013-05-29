@@ -4,7 +4,7 @@
 */
 using System;
 
-namespace Punk.Utils
+namespace GlideTween
 {
 	/// <summary>
 	/// Static class with useful easer functions that can be used by Tweens.
