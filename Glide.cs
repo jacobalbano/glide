@@ -208,18 +208,18 @@ namespace GlideTween
 			while (i --> 0)
 			{
 				float value = start[i] + range[i] * t;
-				if ((behavior & Behavior.Round) > 0)
+				if ((behavior & Behavior.Round) == Behavior.Round)
 				{
 					value = (float) Math.Round(value);
 				}
 				
-				if ((behavior & Behavior.Rotation) > 0)
+				if ((behavior & Behavior.Rotation) == Behavior.Rotation)
 				{
-					float angle = value % 360;
+					float angle = value % 360.0f;
 			
 					if (angle < 0)
 					{
-						angle += 360;
+						angle += 360.0f;
 					}
 				}
 				
