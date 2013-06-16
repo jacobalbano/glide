@@ -74,7 +74,7 @@ namespace GlideTween
 			else
 			{
 				//	Couldn't find either
-				throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", prop, type.FullName));
+				throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", property, type.FullName));
 			}
 			
 			CheckTypeCode(property);
