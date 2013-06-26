@@ -47,8 +47,14 @@ namespace GlideTween
 			
 			var type = obj.GetType();
 			
-			field = type.GetField(property);
-			prop = type.GetProperty(property);
+			BindingFlags flags =
+				BindingFlags.Public |
+				BindingFlags.NonPublic |
+				BindingFlags.Instance |
+				BindingFlags.Static;
+			
+			field = type.GetField(property, flags);
+			prop = type.GetProperty(property, flags);
 			
 //			field = type.Field(property);
 //			prop = type.Property(property);
