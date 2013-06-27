@@ -43,13 +43,13 @@ namespace GlideTween
 		
 #region Statics
 		private static Dictionary<object, List<Glide>> tweens;
-		private static List<Glide> toRemove;
+		private static List<KeyValuePair<object, Glide>> checkLists;
 		private static float elapsed;
 		
 		static Glide()
 		{
 			tweens = new Dictionary<object, List<Glide>>();
-			toRemove = new List<Glide>();
+			checkLists = new List<KeyValuePair<object, Glide>>();
 			elapsed = 0;
 		}
 		
@@ -114,6 +114,7 @@ namespace GlideTween
 		public static void Update(float secondsElapsed)
 		{
 			elapsed = secondsElapsed;
+			var toRemove = new List<object>();
 			
 			foreach (var list in tweens.Values)
 			{
@@ -123,13 +124,27 @@ namespace GlideTween
 				}
 			}
 			
-			foreach (var remove in toRemove)
+			//	check for tweens that have finished
+			foreach (var remove in checkLists)
 			{
 				foreach (var list in tweens.Values)
 				{
-					if (list.Remove(remove)) continue;
+					if (list.Remove(remove.Value))
+					{
+						if (list.Count == 0)
+						{
+							toRemove.Add(remove.Key);
+						}
+					}
 				}
 			}
+			
+			foreach (var remove in toRemove)
+			{
+				tweens.Remove(remove);
+			}
+			
+			checkLists.Clear();
 		}
 		
 #endregion
@@ -185,7 +200,7 @@ namespace GlideTween
 					}
 					
 					time = t = 1;
-					Glide.toRemove.Add(this);
+					Glide.checkLists.Add(new KeyValuePair<object, Glide>(target, this));
 				}
 				
 				if (time == 0)
