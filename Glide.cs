@@ -40,18 +40,19 @@ namespace GlideTween
 		private List<GlideInfo> vars;
 		
 		private object target;
+		private Glide parent;
 		
-#region Statics
-		private static Dictionary<object, List<Glide>> tweens;
-		private static List<KeyValuePair<object, Glide>> checkLists;
-		private static float elapsed;
+#region Some stuff
+		private List<Glide> tweens;
+		private List<Glide> toRemove;
+		private float elapsed;
 		
 		static Glide()
 		{
-			tweens = new Dictionary<object, List<Glide>>();
-			checkLists = new List<KeyValuePair<object, Glide>>();
-			elapsed = 0;
+			Tweener = new Glide();
 		}
+		
+		public static readonly Glide Tweener;
 		
 		/// <summary>
 		/// Tweens a set of numeric properties on an object.
@@ -61,8 +62,11 @@ namespace GlideTween
 		/// <param name="duration">Duration of the tween in seconds.</param>
 		/// <param name="delay">Delay before the tween starts, in seconds.</param>
 		/// <returns>The tween created, for setting properties on.</returns>
-		public static Glide Tween(object target, object values, float duration, float delay = 0)
+		public Glide Tween(object target, object values, float duration, float delay = 0)
 		{
+			if (parent != null)
+				throw new Exception("Tween can only be called from standalone instances!");
+			
 			var glide = new Glide();
 			
 			glide.target = target;
@@ -82,16 +86,9 @@ namespace GlideTween
 				glide.range.Add(range);
 			}
 			
-			if (tweens.ContainsKey(target))
-			{
-				tweens[target].Add(glide);
-			}
-			else
-			{
-				var list = new List<Glide>();
-				list.Add(glide);
-				tweens.Add(target, list);
-			}
+			glide.parent = this;
+			
+			tweens.Add(glide);
 			
 			return glide;
 		}
@@ -102,54 +99,59 @@ namespace GlideTween
 		/// <param name="duration">How long the timer will run for, in seconds.</param>
 		/// <param name="delay">How long to wait before starting the timer, in seconds.</param>
 		/// <returns>The tween created, for setting properties.</returns>
-		public static Glide Timer(float duration, float delay)
+		public Glide Timer(float duration, float delay)
 		{
-			return Glide.Tween(new object(), new {}, duration, delay);
+			return Tween(new object(), new {}, duration, delay);
 		}
 		
 		/// <summary>
 		/// Updates the tweener and all objects it contains.
 		/// </summary>
 		/// <param name="secondsElapsed">Seconds elapsed since last update.</param>
-		public static void Update(float secondsElapsed)
+		public void Update(float secondsElapsed)
 		{
-			elapsed = secondsElapsed;
-			var toRemove = new List<object>();
-			
-			foreach (var list in tweens.Values)
+			foreach (var glide in tweens)
 			{
-				foreach (var glide in list)
-				{
-					glide.Update();
-				}
+				glide.elapsed = secondsElapsed;
+				glide.Update();
 			}
 			
-			//	check for tweens that have finished
-			foreach (var remove in checkLists)
-			{
-				foreach (var list in tweens.Values)
-				{
-					if (list.Remove(remove.Value))
-					{
-						if (list.Count == 0)
-						{
-							toRemove.Add(remove.Key);
-						}
-					}
-				}
-			}
-			
-			foreach (var remove in toRemove)
-			{
+			foreach (var remove in toRemove) {
 				tweens.Remove(remove);
 			}
 			
-			checkLists.Clear();
+			toRemove.Clear();
+			
+			//	check for tweens that have finished
+//			foreach (var remove in checkLists)
+//			{
+//				foreach (var list in tweens.Values)
+//				{
+//					if (list.Remove(remove.Value))
+//					{
+//						if (list.Count == 0)
+//						{
+//							toRemove.Add(remove.Key);
+//						}
+//					}
+//				}
+//			}
+//			
+//			foreach (var remove in toRemove)
+//			{
+//				tweens.Remove(remove);
+//			}
+//			
+//			checkLists.Clear();
 		}
 		
 #endregion
-		private Glide()
+		public Glide()
 		{
+			tweens = new List<Glide>();
+			toRemove = new List<Glide>();
+			elapsed = 0;
+			
 			vars = new List<GlideInfo>();
 			start = new List<float>();
 			range = new List<float>();
@@ -173,7 +175,7 @@ namespace GlideTween
 				update();
 			}
 			
-			time += Glide.elapsed;
+			time += elapsed;
 			float t = time / duration;
 			
 			if (time >= duration)
@@ -200,7 +202,7 @@ namespace GlideTween
 					}
 					
 					time = t = 1;
-					Glide.checkLists.Add(new KeyValuePair<object, Glide>(target, this));
+					parent.toRemove.Add(this);
 				}
 				
 				if (time == 0)
@@ -364,128 +366,81 @@ namespace GlideTween
 			return this;
 		}
 #endregion
+
 				
 #region Control
-		
+
 		/// <summary>
 		/// Remove tweens from the tweener without calling their complete functions.
 		/// </summary>
-		/// <param name="targets">The tweens to cancel. Pass no parameters to cancel all tweens.</param>
-		public static void Cancel(params object[] targets)
+		public void Cancel()
 		{
-			if (targets.Length != 0)
+			if (parent == null)
 			{
-				foreach (var target in targets)
-				{
-					tweens.Remove(target);
-				}
+				tweens.Clear();
 			}
 			else
 			{
-				tweens.Clear();
+				parent.toRemove.Add(this);
 			}
 		}
 		
 		/// <summary>
 		/// Assign tweens their final value and remove them from the tweener.
 		/// </summary>
-		/// <param name="targets">The tweens to cancel. Pass no parameters to cancel all tweens.</param>
-		public static void CancelAndComplete(params object[] targets)
+		public void CancelAndComplete()
 		{
-			var temp = elapsed;
-			elapsed = 0;
-			
-			if (targets.Length == 0)
+			if (parent == null)
 			{
-				foreach (var list in tweens.Values)
+				foreach (var glide in tweens)
 				{
-					foreach (var glide in list)
-					{
-						glide.time = glide.duration;
-						glide.Update();
-					}
+					glide.time = glide.duration;
+					glide.Update();
 				}
 				
 				tweens.Clear();
 			}
 			else
 			{
-				foreach (var target in targets)
-				{
-					var list = tweens[target];
-					
-					foreach (var glide in list)
-					{
-						glide.time = glide.duration;
-						glide.Update();
-					}
-					
-					tweens.Remove(target);
-				}
+				time = duration;
+				Update();
+				parent.toRemove.Add(this);
 			}
-			
-			elapsed = temp;
 		}
 		
 		/// <summary>
 		/// Set tweens to pause. They won't update and their delays won't tick down.
 		/// </summary>
-		/// <param name="targets">The tweens to pause. Pass no parameters to pause all tweens.</param>
-		public static void Pause(params object[] targets)
+		public void Pause()
 		{
-			if (targets.Length == 0)
+			if (parent == null)
 			{
-				foreach (var list in tweens.Values)
+				foreach (var tween in tweens)
 				{
-					foreach (var tween in list)
-					{
-						tween.paused = true;
-					}
+					tween.paused = true;
 				}
 			}
 			else
 			{
-				foreach (object target in targets)
-				{
-					if (tweens.ContainsKey(target))
-					{
-						foreach (var tween in tweens[target])
-						{
-							tween.paused = true;
-						}
-					}
-				}
+				paused = true;
 			}
 		}
 		
 		/// <summary>
 		/// Toggle tweens' paused value.
 		/// </summary>
-		/// <param name="targets">The tweens to toggle paused. Pass no parameters to toggle all tweens.</param>
-		public static void PauseToggle(params object[] targets)
+		public void PauseToggle(params object[] targets)
 		{
-			if (targets.Length == 0)
+			if (parent == null)
 			{
-				foreach (var list in tweens.Values)
+				foreach (var tween in tweens)
 				{
-					foreach (var tween in list)
-					{
-						tween.paused = !tween.paused;
-					}
+					tween.paused = !tween.paused;
 				}
 			}
 			else
 			{
-				foreach (object target in targets)
-				{
-					if (tweens.ContainsKey(target))
-					{
-						foreach (var tween in tweens[target])
-						{
-							tween.paused = !tween.paused;
-						}
-					}
-				}
+				paused = !paused;
 			}
 		}
 		
@@ -493,57 +448,21 @@ namespace GlideTween
 		/// Resumes tweens from a paused state.
 		/// </summary>
 		/// <param name="targets">The tweens to resume. Pass no parameters to resume all paused tweens.</param>
-		public static void Resume(params object[] targets)
+		public void Resume(params object[] targets)
 		{
-			if (targets.Length == 0)
+			if (parent == null)
 			{
-				foreach (var list in tweens.Values)
+				foreach (var tween in tweens)
 				{
-					foreach (var tween in list)
-					{
-						tween.paused = false;
-					}
+					tween.paused = false;
 				}
 			}
 			else
 			{
-				foreach (object target in targets)
-				{
-					if (tweens.ContainsKey(target))
-					{
-						foreach (var tween in tweens[target])
-						{
-							tween.paused = false;
-						}
-					}
-				}
-			}
-		}
-		
-		/// <summary>
-		/// Swap the start and end values of selected tweens.
-		/// </summary>
-		/// <param name="targets">The tweens to reverse. Pass no parameters to reverse all tweens.</param>
-		public static void Reverse(params object[] targets)
-		{
-			if (targets.Length == 0)
-			{
-				foreach (var tween in tweens.Values)
-				{
-					tween.Reverse();
-				}
-			}
-			else
-			{
-				foreach (object target in targets)
-				{
-					if (tweens.ContainsKey(target))
-					{
-						tweens[target].Reverse();
-					}
-				}
+				paused = false;
 			}
 		}
 #endregion
+
 	}
 }
