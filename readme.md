@@ -5,64 +5,74 @@ Glide is a super-simple tweening library for C#.
  2. There is no step two.
 
 # Use
+Create a Glide instance and use it to manage tweens:
+    :::csharp
+	var Tweener = new Glide();
+	Tweener.Tween(...);
+	
 Every frame, update the tweener.
 
-    Glide.Update(ElapsedSeconds);
+    :::csharp
+    Tweener.Update(ElapsedSeconds);
 
 ### Tweening
 Tweening properties is done with a call to Tween. Pass the object to tween, an [anonymous type][1] instance containing value names and target values, and a duration, with an optional delay.
 
     :::csharp
-    Glide.Tween(target, new { X = destination.X, Y = destination.Y }, duration, delay);
+    Twener.Tween(target, new { X = toX, Y = toY }, duration, delay);
 
 You can also use Glide to set up timed callbacks.
 
     :::csharp
-    Glide.Timer(duration, delay).OnComplete(CompleteCallback);
+    Tweener.Timer(duration, delay).OnComplete(CompleteCallback);
 
 ### Control
-Control functions accept any number of objects. If no parameters are passed, the call will affect every target in the tweener.
+If you need to control tweens after they are launched (for example, pausing or cancelling), you can hold a reference to the object returned By Tween():
 
     :::csharp
-    Glide.Cancel();
-    Glide.Cancel(MyObject);
-    Glide.CancelAndComplete(ObjectA, ObjectB);
+	var myTween = Tweener.Tween(object, new {X = toX, Y = toY}, duration);
+	
+You can later use this object to control the tween:
     
-    Glide.Pause();
-    Glide.Pause(MyObject);
-    Glide.PauseToggle();
+	:::csharp
+    myTween.Cancel();
+    myTween.CancelAndComplete();
     
-    Glide.Resume(MyObject);
-    Glide.Resume();
+    myTween.Pause();
+    myTween.PauseToggle();
+	
+    myTween.Resume();
+	
+Calling a control method on a tweener will affect all tweens it manages.
 
 ### Behavior
 You can specify a number of special behaviors for a tween to use. Calls can be chained for setting more than one at a time.
 
     :::csharp
 	//  Glide comes with a full complement of easing functions
-    Glide.Tween(...).Ease(Ease.ElasticOut);
+    Tweener.Tween(...).Ease(Ease.ElasticOut);
     
-    Glide.Tween(...).OnComplete(() => Console.WriteLine("done"));
-    Glide.Tween(...).OnUpdate(() => Console.WriteLine("updating"));
+    Tweener.Tween(...).OnComplete(() => Console.WriteLine("done"));
+    Tweener.Tween(...).OnUpdate(() => Console.WriteLine("updating"));
     
     //  Repeat twice
-    Glide.Tween(...).Repeat(2);
+    Tweener.Tween(...).Repeat(2);
     
     //  Repeat forever
-    Glide.Tween(...).Repeat();
+    Tweener.Tween(...).Repeat();
     
     //  Reverse the tween every other time it repeats
-    Glide.Tween(...).Repeat().Reflect();
+    Tweener.Tween(...).Repeat().Reflect();
     
     //  Swaps the end and start values of a tween.
-    //  This is helpful if you want to tween back to the current position.
-    Glide.Tween(...).Reverse();
+    //  This is helpful if you want to set an object's properties to one set of values, and then tween back to the previous values.
+    Tweener.Tween(...).Reverse();
     
     //  Smoothly interpolate a rotation value past the end of an axis.
-    Glide.Tween(...).Rotation();
+    Tweener.Tween(...).Rotation();
     
     //  Round tweened properties to integer values
-    Glide.Tween(...).Round();
+    Tweener.Tween(...).Round();
     
 If you have any questions, find a bug, or want to request a feature, leave a message here or hit me up on Twitter [@jacobalbano][2]!
 [1]: http://msdn.microsoft.com/en-us/library/vstudio/bb397696.aspx
