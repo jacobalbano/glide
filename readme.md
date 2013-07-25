@@ -20,7 +20,8 @@ Every frame, update the tweener.
 Tweening properties is done with a call to Tween. Pass the object to tween, an [anonymous type][1] instance containing value names and target values, and a duration, with an optional delay.
 
     :::csharp
-    Twener.Tween(target, new { X = toX, Y = toY }, duration, delay);
+	//	This tween will move the X and Y properties of the target
+    Tweener.Tween(target, new { X = toX, Y = toY }, duration, delay);
 
 You can also use Glide to set up timed callbacks.
 
