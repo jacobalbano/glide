@@ -44,7 +44,7 @@ namespace GlideTween
 		
 #region Some stuff
 		private List<Glide> tweens;
-		private List<Glide> toRemove;
+		private List<Glide> toRemove, toAdd;
 		private float elapsed;
 		
 		static Glide()
@@ -88,7 +88,7 @@ namespace GlideTween
 			
 			glide.parent = this;
 			
-			tweens.Add(glide);
+			toAdd.Add(glide);
 			
 			return glide;
 		}
@@ -116,33 +116,18 @@ namespace GlideTween
 				glide.Update();
 			}
 			
-			foreach (var remove in toRemove) {
+			foreach (var add in toAdd)
+			{
+				tweens.Add(add);
+			}
+			
+			foreach (var remove in toRemove)
+			{
 				tweens.Remove(remove);
 			}
 			
+			toAdd.Clear();
 			toRemove.Clear();
-			
-			//	check for tweens that have finished
-//			foreach (var remove in checkLists)
-//			{
-//				foreach (var list in tweens.Values)
-//				{
-//					if (list.Remove(remove.Value))
-//					{
-//						if (list.Count == 0)
-//						{
-//							toRemove.Add(remove.Key);
-//						}
-//					}
-//				}
-//			}
-//			
-//			foreach (var remove in toRemove)
-//			{
-//				tweens.Remove(remove);
-//			}
-//			
-//			checkLists.Clear();
 		}
 		
 #endregion
@@ -150,6 +135,7 @@ namespace GlideTween
 		{
 			tweens = new List<Glide>();
 			toRemove = new List<Glide>();
+			toAdd = new List<Glide>();
 			elapsed = 0;
 			
 			vars = new List<GlideInfo>();
