@@ -36,7 +36,8 @@ If you need to control tweens after they are launched (for example, pausing or c
 
 ```csharp
 var myTween = Tweener.Tween(object, new {X = toX, Y = toY}, duration);
-	
+```
+
 You can later use this object to control the tween:
     
 ```csharp
