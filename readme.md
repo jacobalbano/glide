@@ -56,15 +56,15 @@ If you'd rather not keep tween controller objects around, you can also control t
 
 ```csharp
 
-tweener.Tween(myObject, ...);
+Tweener.Tween(myObject, ...);
 
-tweener.TargetCancel(myObject);
-tweener.TargetCancelAndComplete(myObject);
+Tweener.TargetCancel(myObject);
+Tweener.TargetCancelAndComplete(myObject);
 
-tweener.Pause(myObject);
-tweener.PauseToggle(myObject);
+Tweener.Pause(myObject);
+Tweener.PauseToggle(myObject);
 
-tweener.Resume(myObject);
+Tweener.Resume(myObject);
 ```
 
 ### Behavior
