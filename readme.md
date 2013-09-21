@@ -61,10 +61,10 @@ Tweener.Tween(myObject, ...);
 Tweener.TargetCancel(myObject);
 Tweener.TargetCancelAndComplete(myObject);
 
-Tweener.Pause(myObject);
-Tweener.PauseToggle(myObject);
+Tweener.TargetPause(myObject);
+Tweener.TargetPauseToggle(myObject);
 
-Tweener.Resume(myObject);
+Tweener.TargetResume(myObject);
 ```
 
 ### Behavior
