@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Reflection;
 
 namespace GlideTween
@@ -13,6 +12,7 @@ namespace GlideTween
 		
 		private object obj;
 		
+		public string Name { get; private set; }
 		public float Value
 		{
 			get
@@ -44,6 +44,7 @@ namespace GlideTween
 		public GlideInfo(object obj, string property, bool writeRequired = true)
 		{
 			this.obj = obj;
+			Name = property;
 			
 			var type = obj.GetType();
 			
@@ -53,17 +54,11 @@ namespace GlideTween
 				BindingFlags.Instance |
 				BindingFlags.Static;
 			
-			field = type.GetField(property, flags);
-			prop = type.GetProperty(property, flags);
-			
-//			field = type.Field(property);
-//			prop = type.Property(property);
-			
-			if (field != null)	//	Using a field
+			if ((field = type.GetField(property, flags)) != null)	//	Using a field
 			{
 				typeCode = Type.GetTypeCode(field.GetValue(obj).GetType());
 			}
-			else if (prop != null)	//	Using a property
+			else if ((prop = type.GetProperty(property, flags)) != null)	//	Using a property
 			{
 				if (!prop.CanRead)
 				{

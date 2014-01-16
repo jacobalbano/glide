@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Reflection;
 
 namespace GlideTween
@@ -17,12 +16,8 @@ namespace GlideTween
 		}
 
 #region Callbacks
-		public delegate float Easer(float t);
-		public delegate void Callback();
-		
-		private Easer ease;
-		private Callback update;
-		private Callback complete;
+		private Func<float, float> ease;
+		private Action begin, update, complete;
 #endregion
 
 #region Timing
@@ -36,19 +31,21 @@ namespace GlideTween
 		private int repeatCount;
 		private Behavior behavior;
 		
-		private List<float> start, range;
+		private List<float> start, range, end;
 		private List<GlideInfo> vars;
 		
 		private object target;
 		private Glide parent;
 		
 #region Some stuff
+		private static object _dummy;
 		private Dictionary<object, List<Glide>> tweens;
 		private List<Glide> toRemove, toAdd;
 		private float elapsed;
 		
 		static Glide()
 		{
+			_dummy = new {};
 			Tweener = new Glide();
 		}
 		
@@ -73,22 +70,26 @@ namespace GlideTween
 			glide.duration = duration;
 			glide.delay = delay;
 			
-			foreach (PropertyInfo property in values.GetType().GetProperties())
-			{
-				var info = new GlideInfo(target, property.Name);
-				var to = new GlideInfo(values, property.Name, false);
-			
-				float start = info.Value;
-				float range = to.Value - start;
-				
-				glide.vars.Add(info);
-				glide.start.Add(start);
-				glide.range.Add(range);
-			}
-			
 			glide.parent = this;
 			
 			toAdd.Add(glide);
+			
+			if (values == null) // in case of timer
+				return glide;
+			
+			foreach (PropertyInfo property in values.GetType().GetProperties())
+			{
+				var info = new GlideInfo(target, property.Name);
+				var to = new GlideInfo(values, property.Name, false).Value;
+			
+				float s = info.Value;
+				float r = to - s;
+				
+				glide.vars.Add(info);
+				glide.start.Add(s);
+				glide.range.Add(r);
+				glide.end.Add(to);
+			}
 			
 			return glide;
 		}
@@ -101,7 +102,7 @@ namespace GlideTween
 		/// <returns>The tween created, for setting properties.</returns>
 		public Glide Timer(float duration, float delay)
 		{
-			return Tween(new object(), new {}, duration, delay);
+			return Tween(_dummy, null, duration, delay);
 		}
 		
 		/// <summary>
@@ -169,10 +170,11 @@ namespace GlideTween
 			vars = new List<GlideInfo>();
 			start = new List<float>();
 			range = new List<float>();
+			end = new List<float>();
 		}
 		
 		private void Update()
-		{
+		{	
 			if (paused)
 			{
 				return;
@@ -183,6 +185,13 @@ namespace GlideTween
 				delay -= elapsed;
 				return;
 			}
+			
+			if (time == 0)
+			{
+				if (begin != null)
+					begin();
+			}
+			
 			
 			if (update != null)
 			{
@@ -261,13 +270,57 @@ namespace GlideTween
 #region Behavior
 		
 		/// <summary>
+		/// Apply target values to a starting point before tweening.
+		/// </summary>
+		/// <param name="values">The values to apply, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
+		/// <returns>A reference to this.</returns>
+		public Glide From(object values)
+		{			
+			foreach (PropertyInfo property in values.GetType().GetProperties())
+			{
+				int index = vars.FindIndex(i => String.Compare(i.Name, property.Name, true) == 0);
+				if (index >= 0)
+				{
+					//	if we're already tweening this value, adjust the range
+					var info = vars[index];
+					
+					var to = new GlideInfo(values, property.Name, false);
+					info.Value = to.Value;
+				
+					start[index] = info.Value;
+					range[index] = this.end[index] - start[index];
+				}
+				else
+				{
+					//	if we aren't tweening this value, just set it
+					var info = new GlideInfo(target, property.Name, true);
+					var to = new GlideInfo(values, property.Name, false);
+					info.Value = to.Value;
+				}
+			}
+			
+			return this;
+		}
+		
+		/// <summary>
 		/// Set the easing function.
 		/// </summary>
 		/// <param name="ease">The Easer to use.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide Ease(Easer ease)
+		public Glide Ease(Func<float, float> ease)
 		{
 			this.ease = ease;
+			return this;
+		}
+		
+		/// <summary>
+		/// Set a function to call when the tween begins (useful when using delays).
+		/// </summary>
+		/// <param name="callback">The function that will be called when the tween starts, after the delay.</param>
+		/// <returns>A reference to this.</returns>
+		public Glide OnBegin(Action callback)
+		{
+			begin = callback;
 			return this;
 		}
 		
@@ -277,7 +330,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="callback">The function that will be called on tween completion.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide OnComplete(Callback callback)
+		public Glide OnComplete(Action callback)
 		{
 			complete = callback;
 			return this;
@@ -288,7 +341,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="callback">The function to use.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide OnUpdate(Callback callback)
+		public Glide OnUpdate(Action callback)
 		{
 			update = callback;
 			return this;
