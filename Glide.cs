@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace GlideTween
 {
-	public class Glide
+	public partial class Glide
 	{
 		[Flags]
 		private enum Behavior
@@ -17,154 +17,33 @@ namespace GlideTween
 
 #region Callbacks
 		private Func<float, float> ease;
-		private Action begin, update, complete;
+        private Action begin, update, complete;
 #endregion
 
 #region Timing
-		private bool paused;
-		private float delay;
-		private float duration;
-		
-		private float time;
+        private bool paused;
+        private float delay;
+        private float duration;
+
+        private float time;
 #endregion
-		
-		private int repeatCount;
-		private Behavior behavior;
-		
-		private List<float> start, range, end;
-		private List<GlideInfo> vars;
-		
-		private object target;
-		private Glide parent;
+
+        private int repeatCount;
+        private Behavior behavior;
+
+        private List<float> start, range, end;
+        private List<GlideInfo> vars;
+
+        private object target;
+        private GlideManagerImpl parent;
 		
 #region Some stuff
-		private static object _dummy;
-		private Dictionary<object, List<Glide>> tweens;
-		private List<Glide> toRemove, toAdd;
-		private float elapsed;
-		
-		static Glide()
-		{
-			_dummy = new {};
-			Tweener = new Glide();
-		}
-		
-		public static readonly Glide Tweener;
-		
-		/// <summary>
-		/// Tweens a set of numeric properties on an object.
-		/// </summary>
-		/// <param name="target">The object to tween.</param>
-		/// <param name="values">The values to tween to, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
-		/// <param name="duration">Duration of the tween in seconds.</param>
-		/// <param name="delay">Delay before the tween starts, in seconds.</param>
-		/// <returns>The tween created, for setting properties on.</returns>
-		public Glide Tween(object target, object values, float duration, float delay = 0)
-		{
-			if (parent != null)
-				throw new Exception("Tween can only be called from standalone instances!");
-			
-			var glide = new Glide();
-			
-			glide.target = target;
-			glide.duration = duration;
-			glide.delay = delay;
-			
-			glide.parent = this;
-			
-			toAdd.Add(glide);
-			
-			if (values == null) // in case of timer
-				return glide;
-			
-			foreach (PropertyInfo property in values.GetType().GetProperties())
-			{
-				var info = new GlideInfo(target, property.Name);
-				var to = new GlideInfo(values, property.Name, false).Value;
-			
-				float s = info.Value;
-				float r = to - s;
-				
-				glide.vars.Add(info);
-				glide.start.Add(s);
-				glide.range.Add(r);
-				glide.end.Add(to);
-			}
-			
-			return glide;
-		}
-		
-		/// <summary>
-		/// Starts a simple timer for setting up callback scheduling.
-		/// </summary>
-		/// <param name="duration">How long the timer will run for, in seconds.</param>
-		/// <param name="delay">How long to wait before starting the timer, in seconds.</param>
-		/// <returns>The tween created, for setting properties.</returns>
-		public Glide Timer(float duration, float delay)
-		{
-			return Tween(_dummy, null, duration, delay);
-		}
-		
-		/// <summary>
-		/// Updates the tweener and all objects it contains.
-		/// </summary>
-		/// <param name="secondsElapsed">Seconds elapsed since last update.</param>
-		public void Update(float secondsElapsed)
-		{
-			ApplyAll(glide => {
-				glide.elapsed = secondsElapsed;
-				glide.Update();      	
-         	});
-			
-			AddAndRemove();
-		}
-		
-		private void AddAndRemove()
-		{
-			foreach (var add in toAdd)
-			{
-				if (!tweens.ContainsKey(add.target))
-				{
-					tweens[add.target] = new List<Glide>();
-				}
-				
-				tweens[add.target].Add(add);
-			}
-			
-			foreach (var remove in toRemove)
-			{
-				List<Glide> list;
-				if (tweens.TryGetValue(remove.target, out list))
-				{
-					list.Remove(remove);
-					if (list.Count == 0)
-					{
-						tweens.Remove(remove.target);
-					}
-				}
-			}
-			
-			toAdd.Clear();
-			toRemove.Clear();
-		}
-		
-		private void ApplyAll(Action<Glide> action)
-		{
-			foreach (var list in tweens.Values)
-			{
-				foreach (var glide in list)
-				{
-					action(glide);
-				}
-			}
-		}
+
+        private float elapsed;
 		
 #endregion
 		public Glide()
 		{
-			tweens = new Dictionary<object, List<Glide>>();
-			toRemove = new List<Glide>();
-			toAdd = new List<Glide>();
 			elapsed = 0;
 			
 			vars = new List<GlideInfo>();
@@ -172,8 +51,8 @@ namespace GlideTween
 			range = new List<float>();
 			end = new List<float>();
 		}
-		
-		private void Update()
+
+        internal void Update()
 		{	
 			if (paused)
 			{
@@ -225,7 +104,7 @@ namespace GlideTween
 					}
 					
 					time = t = 1;
-					parent.toRemove.Add(this);
+                    parent.Remove(this);
 				}
 				
 				if (time == 0)
@@ -440,14 +319,7 @@ namespace GlideTween
 		/// </summary>
 		public void Cancel()
 		{
-			if (parent == null)
-			{
-				ApplyAll(glide => toRemove.Add(glide));
-			}
-			else
-			{
-				parent.toRemove.Add(this);
-			}
+            parent.Remove(this);
 		}
 		
 		/// <summary>
@@ -455,20 +327,9 @@ namespace GlideTween
 		/// </summary>
 		public void CancelAndComplete()
 		{
-			if (parent == null)
-			{
-				ApplyAll(glide => {
-					glide.time = glide.duration;
-					glide.update = null;
-					toRemove.Add(glide);
-				});
-			}
-			else
-			{
-				time = duration;
-				update = null;
-				parent.toRemove.Add(this);
-			}
+			time = duration;
+			update = null;
+            parent.Remove(this);
 		}
 		
 		/// <summary>
@@ -476,14 +337,7 @@ namespace GlideTween
 		/// </summary>
 		public void Pause()
 		{
-			if (parent == null)
-			{
-				ApplyAll(glide => glide.paused = true);
-			}
-			else
-			{
-				paused = true;
-			}
+    		paused = true;
 		}
 		
 		/// <summary>
@@ -491,14 +345,7 @@ namespace GlideTween
 		/// </summary>
 		public void PauseToggle()
 		{
-			if (parent == null)
-			{
-				ApplyAll(glide => glide.paused = !glide.paused);
-			}
-			else
-			{
-				paused = !paused;
-			}
+			paused = !paused;
 		}
 		
 		/// <summary>
@@ -506,82 +353,7 @@ namespace GlideTween
 		/// </summary>
 		public void Resume()
 		{
-			if (parent == null)
-			{
-				ApplyAll(glide => glide.paused = false);
-			}
-			else
-			{
-				paused = false;
-			}
-		}
-#endregion
-
-
-#region Bulk control
-		private void ApplyBulkControl(object[] targets, Action<Glide> action)
-		{
-			if (parent != null)
-				throw new Exception("Bulk control functions can only be called from standalone instances!");
-			
-			foreach (var target in targets)
-			{
-				List<Glide> list;
-				if (tweens.TryGetValue(target, out list))
-				{
-					foreach (var glide in list)
-					{
-						action(glide);
-					}
-				}
-			}
-		}
-		
-		/// <summary>
-		/// Look up tweens by the objects they target, and cancel them.
-		/// </summary>
-		/// <param name="targets">The objects being tweened that you want to cancel.</param>
-		public void TargetCancel(params object[] targets)
-		{
-			ApplyBulkControl(targets, glide => glide.Cancel());
-		}
-		
-		/// <summary>
-		/// Look up tweens by the objects they target, cancel them, set them to their final values, and call the complete callback.
-		/// </summary>
-		/// <param name="targets">The objects being tweened that you want to cancel and complete.</param>
-		public void TargetCancelAndComplete(params object[] targets)
-		{
-			ApplyBulkControl(targets, glide => glide.CancelAndComplete());
-		}
-		
-		
-		/// <summary>
-		/// Look up tweens by the objects they target, and pause them.
-		/// </summary>
-		/// <param name="targets">The objects being tweened that you want to pause.</param>
-		public void TargetPause(params object[] targets)
-		{
-			ApplyBulkControl(targets, glide => glide.Pause());
-		}
-		
-		/// <summary>
-		/// Look up tweens by the objects they target, and toggle their paused states.
-		/// </summary>
-		/// <param name="targets">The objects being tweened that you want to toggle pause.</param>
-		public void TargetPauseToggle(params object[] targets)
-		{
-			ApplyBulkControl(targets, glide => glide.PauseToggle());
-		}
-		
-		
-		/// <summary>
-		/// Look up tweens by the objects they target, and resume them from paused.
-		/// </summary>
-		/// <param name="targets">The objects being tweened that you want to resume.</param>
-		public void TargetResume(params object[] targets)
-		{
-			ApplyBulkControl(targets, glide => glide.Resume());
+			paused = false;
 		}
 #endregion
 	}
