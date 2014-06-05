@@ -140,6 +140,8 @@ namespace GlideTween
 					{
 						angle += 360.0f;
 					}
+					
+					value = angle;
 				}
 				
 				vars[i].Value = value;
