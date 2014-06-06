@@ -75,7 +75,7 @@ namespace GlideTween
             /// <param name="duration">How long the timer will run for, in seconds.</param>
             /// <param name="delay">How long to wait before starting the timer, in seconds.</param>
             /// <returns>The tween created, for setting properties.</returns>
-            public Glide Timer(float duration, float delay)
+            public Glide Timer(float duration, float delay = 0)
             {
                 return Tween(_dummy, null, duration, delay);
             }
