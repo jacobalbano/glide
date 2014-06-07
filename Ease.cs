@@ -1,7 +1,3 @@
-/*
- * Originally part of #Punk, a port of FlashPunk to C#
- * https://bitbucket.org/jacobalbano/punk/overview
-*/
 using System;
 
 namespace GlideTween

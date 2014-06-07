@@ -12,7 +12,8 @@ namespace GlideTween
 			None,
 			Reflect,
 			Rotation,
-			Round
+			Round,
+			HexColor
 		}
 
 #region Callbacks
@@ -26,6 +27,7 @@ namespace GlideTween
         private float duration;
 
         private float time;
+        private float elapsed;
 #endregion
 
         private int repeatCount;
@@ -37,11 +39,6 @@ namespace GlideTween
         private object target;
         private GlideManagerImpl parent;
 		
-#region Some stuff
-
-        private float elapsed;
-		
-#endregion
 		public Glide()
 		{
 			elapsed = 0;
@@ -142,6 +139,27 @@ namespace GlideTween
 					}
 					
 					value = angle;
+				}
+				
+				if ((behavior & Behavior.HexColor) == Behavior.HexColor)
+				{
+					var from = (int) start[i];
+					var to = (int) end[i];
+					
+					var r = from >> 16 & 0xFF;
+					var g = from >> 8 & 0xFF;
+					var b = from & 0xFF;
+					var startR = r / 255f;
+					var startG = g / 255f;
+					var startB = b / 255f;
+					var rangeR = ((to >> 16 & 0xFF) / 255f) - startR;
+					var rangeG = ((to >> 8 & 0xFF) / 255f) - startG;
+					var rangeB = ((to & 0xFF) / 255f) - startB;
+					
+					r = (int) ((startR + rangeR * t) * 255);
+					g = (int) ((startG + rangeG * t) * 255);
+					b = (int) ((startB + rangeB * t) * 255);
+					value = r << 16 | g << 8 | b;
 				}
 				
 				vars[i].Value = value;
@@ -250,21 +268,33 @@ namespace GlideTween
 		}
 		
 		/// <summary>
+		/// Whether the property should be tweened as a color.
+		/// </summary>
+		/// <returns>A reference to this.</returns>
+		public Glide HexColor()
+		{
+			behavior |= Behavior.HexColor;
+			return this;
+		}
+		
+		/// <summary>
 		/// Swaps the start and end values of the tween.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
 		public Glide Reverse()
-		{
+		{	
 			int count = vars.Count;			
 			while (count --> 0)
 			{
 				float s = start[count];
-				float r = range[count];
+				float e = end[count];
 				
 				//	Set start to end and end to start
-				start[count] = s + r;
-				range[count] = s - (s + r);
+				start[count] = e;
+				end[count] = s;
+				range[count] = end[count] - start[count];	//	don't try to optimize this line. you're wrong
 			}
+			
 			return this;
 		}
 		
