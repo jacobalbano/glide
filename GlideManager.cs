@@ -14,7 +14,7 @@ namespace GlideTween
             static GlideManagerImpl()
             {
                 _dummy = new {};
-                Tweener = new Glide();
+                Tweener = new GlideManager();
             }
 
             public GlideManagerImpl()
@@ -24,7 +24,7 @@ namespace GlideTween
                 toAdd = new List<Glide>();
             }
 
-            public static readonly Glide Tweener;
+            public static readonly GlideManager Tweener;
             private static object _dummy;
             private Dictionary<object, List<Glide>> tweens;
             private List<Glide> toRemove, toAdd;
