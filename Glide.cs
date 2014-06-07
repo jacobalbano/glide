@@ -38,6 +38,9 @@ namespace GlideTween
 
         private object target;
         private GlideManagerImpl parent;
+        
+        public float TimeRemaining { get { return duration - time; } }
+        public float Completion { get { var c = time / duration; return c < 0 ? 0 : (c > 1 ? 1 : c); } }
 		
 		public Glide()
 		{
@@ -100,7 +103,8 @@ namespace GlideTween
 						complete();
 					}
 					
-					time = t = 1;
+					time = duration;
+					t = 1;
                     parent.Remove(this);
 				}
 				
@@ -144,7 +148,7 @@ namespace GlideTween
 				if ((behavior & Behavior.HexColor) == Behavior.HexColor)
 				{
 					var from = (int) start[i];
-					var to = (int) end[i];
+					var to = from + (int) range[i];
 					
 					var r = from >> 16 & 0xFF;
 					var g = from >> 8 & 0xFF;
@@ -287,12 +291,11 @@ namespace GlideTween
 			while (count --> 0)
 			{
 				float s = start[count];
-				float e = end[count];
+				float r = range[count];
 				
 				//	Set start to end and end to start
-				start[count] = e;
-				end[count] = s;
-				range[count] = end[count] - start[count];	//	don't try to optimize this line. you're wrong
+				start[count] = s + r;
+				range[count] = s - (s + r);
 			}
 			
 			return this;
