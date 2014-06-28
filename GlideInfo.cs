@@ -2,98 +2,103 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace GlideTween
+namespace Glide
 {
 	internal class GlideInfo
 	{
-		private FieldInfo field;
-		private PropertyInfo prop;
-		private TypeCode typeCode;
-		
-		private object obj;
-		
-		public string Name { get; private set; }
-		public float Value
+		static GlideInfo()
 		{
-			get
-			{
-				if (field != null)
-				{
-					return Convert.ToSingle(field.GetValue(obj));
-				}
-				else
-				{
-					return Convert.ToSingle(prop.GetValue(obj, null));
-				}
-				
-			}
+			numericTypes = new Type[] {
+				typeof(Int16),
+				typeof(Int32),
+				typeof(Int64),
+				typeof(UInt16),
+				typeof(UInt32),
+				typeof(UInt64),
+				typeof(Single),
+				typeof(Double)
+			};
 			
-			set
-			{
-				if (field != null)
-				{
-					field.SetValue(obj, Convert.ChangeType(value, typeCode));
-				}
-				else
-				{
-					prop.SetValue(obj, Convert.ChangeType(value, typeCode), null);
-				}
-			}
-		}
-		
-		public GlideInfo(object obj, string property, bool writeRequired = true)
-		{
-			this.obj = obj;
-			Name = property;
-			
-			var type = obj.GetType();
-			
-			BindingFlags flags =
+			flags =
 				BindingFlags.Public |
 				BindingFlags.NonPublic |
 				BindingFlags.Instance |
 				BindingFlags.Static;
-			
-			if ((field = type.GetField(property, flags)) != null)	//	Using a field
-			{
-				typeCode = Type.GetTypeCode(field.GetValue(obj).GetType());
-			}
-			else if ((prop = type.GetProperty(property, flags)) != null)	//	Using a property
-			{
-				if (!prop.CanRead)
-				{
-					throw new Exception(string.Format("Property '{0}' on object of type {1} has no setter accessor.", prop, type.FullName));
-				}
-				
-				if (!prop.CanWrite && writeRequired)
-				{
-					throw new Exception(string.Format("Property '{0}' on object of type {1} has no getter accessor.", prop, type.FullName));
-				}
-				
-				typeCode = Type.GetTypeCode(prop.GetValue(obj, null).GetType());
-			}
-			else
-			{
-				//	Couldn't find either
-				throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", property, type.FullName));
-			}
-			
-			CheckTypeCode(property);
 		}
 		
-		private void CheckTypeCode(string property)
+		private static Type[] numericTypes;
+		private static BindingFlags flags;
+		
+		private FieldInfo field;
+		private PropertyInfo prop;
+		
+		private object Target;
+		
+		public string Name { get; private set; }
+		
+		public object Value
 		{
-			if (!(typeCode == TypeCode.Int16 	||
-		    typeCode == TypeCode.Int32 			||
-		    typeCode == TypeCode.Int64 			||
-		    typeCode == TypeCode.UInt16 		||
-		    typeCode == TypeCode.UInt32			||
-		    typeCode == TypeCode.UInt64			||
-		    typeCode == TypeCode.Single			||
-		    typeCode == TypeCode.Double			))
-			{
-				throw new InvalidCastException(string.Format("Property or field to tween must be numeric ({0} on {1}.", property, obj.GetType().Name));
+			get { return field != null ? field.GetValue(Target) : prop.GetValue(Target, null); }
+			set {
+				if (field != null) 
+					field.SetValue(Target, value);
+				else
+					prop.SetValue(Target, value, null);
 			}
+		}
+		
+		public GlideInfo(object Target, string property, bool writeRequired = true)
+		{
+			this.Target = Target;
+			Name = property;
+			
+			var type = Target.GetType();
+			field = type.GetField(property, flags);
+			prop = type.GetProperty(property, flags);
+			
+			if (field == null)
+			{
+				if (prop == null)
+				{
+					//	Couldn't find either
+					throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", property, type.FullName));
+				}
+				else
+				{
+					if (!prop.CanRead)
+					{
+						throw new Exception(string.Format("Property '{0}' on object of type {1} has no setter accessor.", prop, type.FullName));
+					}
+					
+					if (!prop.CanWrite && writeRequired)
+					{
+						throw new Exception(string.Format("Property '{0}' on object of type {1} has no getter accessor.", prop, type.FullName));
+					}
+				}
+			}
+			
+			CheckPropertyType(Value.GetType(), property, Target.GetType().Name);
+		}
+		
+		private void CheckPropertyType(Type type, string prop, string targetTypeName)
+		{
+			if (!ValidatePropertyType(type))
+			{
+				throw new InvalidCastException(string.Format("Property is invalid: ({0} on {1}).", prop, targetTypeName));
+			}
+		}
+		
+		protected virtual bool ValidatePropertyType(Type type)
+		{
+			return AnyEquals(type, numericTypes);
+		}
+		
+		static bool AnyEquals<T>(T value, params T[] options)
+		{
+			foreach (var option in options)
+				if (value.Equals(option)) return true;
+			
+			return false;
 		}
 	}
 }

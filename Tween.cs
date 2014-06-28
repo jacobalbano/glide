@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Glide;
 
-namespace GlideTween
+namespace Glide
 {
-	public partial class Glide
+	public partial class Tween
 	{
 		[Flags]
 		private enum Behavior
@@ -12,8 +13,7 @@ namespace GlideTween
 			None,
 			Reflect,
 			Rotation,
-			Round,
-			HexColor
+			Round
 		}
 
 #region Callbacks
@@ -22,9 +22,9 @@ namespace GlideTween
 #endregion
 
 #region Timing
-        private bool paused;
-        private float delay;
-        private float duration;
+        protected bool paused;
+        protected float Delay;
+        protected float Duration;
 
         private float time;
         private float elapsed;
@@ -36,13 +36,13 @@ namespace GlideTween
         private List<float> start, range, end;
         private List<GlideInfo> vars;
 
-        private object target;
-        private GlideManagerImpl parent;
+        protected object Target;
+        private Tween.TweenerImpl parent;
         
-        public float TimeRemaining { get { return duration - time; } }
-        public float Completion { get { var c = time / duration; return c < 0 ? 0 : (c > 1 ? 1 : c); } }
+        public float TimeRemaining { get { return Duration - time; } }
+        public float Completion { get { var c = time / Duration; return c < 0 ? 0 : (c > 1 ? 1 : c); } }
 		
-		public Glide()
+		public Tween()
 		{
 			elapsed = 0;
 			
@@ -59,9 +59,9 @@ namespace GlideTween
 				return;
 			}
 			
-			if (delay > 0)
+			if (Delay > 0)
 			{
-				delay -= elapsed;
+				Delay -= elapsed;
 				return;
 			}
 			
@@ -73,14 +73,12 @@ namespace GlideTween
 			
 			
 			if (update != null)
-			{
 				update();
-			}
 			
 			time += elapsed;
-			float t = time / duration;
+			float t = time / Duration;
 			
-			if (time >= duration)
+			if (time >= Duration)
 			{
 				if (repeatCount > 0)
 				{
@@ -103,7 +101,7 @@ namespace GlideTween
 						complete();
 					}
 					
-					time = duration;
+					time = Duration;
 					t = 1;
                     parent.Remove(this);
 				}
@@ -124,6 +122,11 @@ namespace GlideTween
 				t = ease(t);
 			}
 			
+			Interpolate(t);
+		}
+        
+        protected virtual void Interpolate(float t)
+        {
 			int i = vars.Count;			
 			while (i --> 0)
 			{
@@ -145,30 +148,9 @@ namespace GlideTween
 					value = angle;
 				}
 				
-				if ((behavior & Behavior.HexColor) == Behavior.HexColor)
-				{
-					var from = (int) start[i];
-					var to = from + (int) range[i];
-					
-					var r = from >> 16 & 0xFF;
-					var g = from >> 8 & 0xFF;
-					var b = from & 0xFF;
-					var startR = r / 255f;
-					var startG = g / 255f;
-					var startB = b / 255f;
-					var rangeR = ((to >> 16 & 0xFF) / 255f) - startR;
-					var rangeG = ((to >> 8 & 0xFF) / 255f) - startG;
-					var rangeB = ((to & 0xFF) / 255f) - startB;
-					
-					r = (int) ((startR + rangeR * t) * 255);
-					g = (int) ((startG + rangeG * t) * 255);
-					b = (int) ((startB + rangeB * t) * 255);
-					value = r << 16 | g << 8 | b;
-				}
-				
 				vars[i].Value = value;
 			}
-		}
+        }
 		
 #region Behavior
 		
@@ -177,7 +159,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="values">The values to apply, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
 		/// <returns>A reference to this.</returns>
-		public Glide From(object values)
+		public Tween From(object values)
 		{			
 			foreach (PropertyInfo property in values.GetType().GetProperties())
 			{
@@ -190,13 +172,13 @@ namespace GlideTween
 					var to = new GlideInfo(values, property.Name, false);
 					info.Value = to.Value;
 				
-					start[index] = info.Value;
+					start[index] = Convert.ToSingle(info.Value);
 					range[index] = this.end[index] - start[index];
 				}
 				else
 				{
 					//	if we aren't tweening this value, just set it
-					var info = new GlideInfo(target, property.Name, true);
+					var info = new GlideInfo(Target, property.Name, true);
 					var to = new GlideInfo(values, property.Name, false);
 					info.Value = to.Value;
 				}
@@ -210,7 +192,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="ease">The Easer to use.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide Ease(Func<float, float> ease)
+		public Tween Ease(Func<float, float> ease)
 		{
 			this.ease = ease;
 			return this;
@@ -221,7 +203,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="callback">The function that will be called when the tween starts, after the delay.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide OnBegin(Action callback)
+		public Tween OnBegin(Action callback)
 		{
 			begin = callback;
 			return this;
@@ -233,7 +215,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="callback">The function that will be called on tween completion.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide OnComplete(Action callback)
+		public Tween OnComplete(Action callback)
 		{
 			complete = callback;
 			return this;
@@ -244,7 +226,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="callback">The function to use.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide OnUpdate(Action callback)
+		public Tween OnUpdate(Action callback)
 		{
 			update = callback;
 			return this;
@@ -255,7 +237,7 @@ namespace GlideTween
 		/// </summary>
 		/// <param name="times">Number of times to repeat. Leave blank or pass a negative number to repeat infinitely.</param>
 		/// <returns>A reference to this.</returns>
-		public Glide Repeat(int times = -1)
+		public Tween Repeat(int times = -1)
 		{
 			repeatCount = times;
 			return this;
@@ -265,19 +247,9 @@ namespace GlideTween
 		/// Sets the tween to reverse every other time it repeats. Repeating must be enabled for this to have any effect.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
-		public Glide Reflect()
+		public Tween Reflect()
 		{
 			behavior |= Behavior.Reflect;
-			return this;
-		}
-		
-		/// <summary>
-		/// Whether the property should be tweened as a color.
-		/// </summary>
-		/// <returns>A reference to this.</returns>
-		public Glide HexColor()
-		{
-			behavior |= Behavior.HexColor;
 			return this;
 		}
 		
@@ -285,7 +257,7 @@ namespace GlideTween
 		/// Swaps the start and end values of the tween.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
-		public Glide Reverse()
+		public virtual Tween Reverse()
 		{	
 			int count = vars.Count;			
 			while (count --> 0)
@@ -305,7 +277,7 @@ namespace GlideTween
 		/// Whether this tween handles rotation.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
-		public Glide Rotation()
+		public Tween Rotation()
 		{
 			behavior |= Behavior.Rotation;
 			
@@ -341,7 +313,7 @@ namespace GlideTween
 		/// Whether tweened values should be rounded to integer values.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
-		public Glide Round()
+		public Tween Round()
 		{
 			behavior |= Behavior.Round;
 			return this;
@@ -362,7 +334,7 @@ namespace GlideTween
 		/// </summary>
 		public void CancelAndComplete()
 		{
-			time = duration;
+			time = Duration;
 			update = null;
             parent.Remove(this);
 		}

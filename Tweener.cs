@@ -2,32 +2,32 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace GlideTween
+namespace Glide
 {
-    public class GlideManager : Glide.GlideManagerImpl
+    public class Tweener : Tween.TweenerImpl
     {}
 
-    public partial class Glide
+    public partial class Tween
     {
-        public class GlideManagerImpl
+        public class TweenerImpl
         {
-            static GlideManagerImpl()
+            static TweenerImpl()
             {
                 _dummy = new {};
-                Tweener = new GlideManager();
+                Tweener = new Tweener();
             }
 
-            public GlideManagerImpl()
+            public TweenerImpl()
             {
-                tweens = new Dictionary<object, List<Glide>>();
-                toRemove = new List<Glide>();
-                toAdd = new List<Glide>();
+                tweens = new Dictionary<object, List<Tween>>();
+                toRemove = new List<Tween>();
+                toAdd = new List<Tween>();
             }
 
-            public static readonly GlideManager Tweener;
+            public static readonly Tweener Tweener;
             private static object _dummy;
-            private Dictionary<object, List<Glide>> tweens;
-            private List<Glide> toRemove, toAdd;
+            private Dictionary<object, List<Tween>> tweens;
+            private List<Tween> toRemove, toAdd;
 
             /// <summary>
             /// Tweens a set of numeric properties on an object.
@@ -37,36 +37,45 @@ namespace GlideTween
             /// <param name="duration">Duration of the tween in seconds.</param>
             /// <param name="delay">Delay before the tween starts, in seconds.</param>
             /// <returns>The tween created, for setting properties on.</returns>
-            public Glide Tween(object target, object values, float duration, float delay = 0)
+            public Tween Tween(object target, object values, float duration, float delay = 0)
             {
-                var glide = new Glide();
+                var tween = new Tween();
 
-                glide.target = target;
-                glide.duration = duration;
-                glide.delay = delay;
+                tween.Target = target;
+                tween.Duration = duration;
+                tween.Delay = delay;
 
-                glide.parent = this;
-
-                toAdd.Add(glide);
+                AddTween(tween);
 
                 if (values == null) // in case of timer
-                    return glide;
+                    return tween;
 
                 foreach (PropertyInfo property in values.GetType().GetProperties())
                 {
                     var info = new GlideInfo(target, property.Name);
-                    var to = new GlideInfo(values, property.Name, false).Value;
+                    var to = Convert.ToSingle(new GlideInfo(values, property.Name, false).Value);
 
-                    float s = info.Value;
+                    float s = Convert.ToSingle(info.Value);
                     float r = to - s;
 
-                    glide.vars.Add(info);
-                    glide.start.Add(s);
-                    glide.range.Add(r);
-                    glide.end.Add(to);
+                    tween.vars.Add(info);
+                    tween.start.Add(s);
+                    tween.range.Add(r);
+                    tween.end.Add(to);
                 }
 
-                return glide;
+                return tween;
+            }
+            
+            /// <summary>
+            /// Manually add a tween to the tweener.
+            /// Only use this to add custom tween classes!
+            /// </summary>
+            /// <param name="tween">The tween to add.</param>
+            public void AddTween(Tween tween)
+            {
+                tween.parent = this;
+            	toAdd.Add(tween);
             }
 
             /// <summary>
@@ -75,7 +84,7 @@ namespace GlideTween
             /// <param name="duration">How long the timer will run for, in seconds.</param>
             /// <param name="delay">How long to wait before starting the timer, in seconds.</param>
             /// <returns>The tween created, for setting properties.</returns>
-            public Glide Timer(float duration, float delay = 0)
+            public Tween Timer(float duration, float delay = 0)
             {
                 return Tween(_dummy, null, duration, delay);
             }
@@ -95,7 +104,7 @@ namespace GlideTween
             {
                 ApplyAll(glide =>
                 {
-                    glide.time = glide.duration;
+                    glide.time = glide.Duration;
                     glide.update = null;
                     toRemove.Add(glide);
                 });
@@ -140,12 +149,12 @@ namespace GlideTween
                 AddAndRemove();
             }
 
-            internal void Remove(Glide glide)
+            internal void Remove(Tween glide)
             {
                 toRemove.Add(glide);
             }
 
-            private void ApplyAll(Action<Glide> action)
+            private void ApplyAll(Action<Tween> action)
             {
                 foreach (var list in tweens.Values)
                 {
@@ -160,23 +169,23 @@ namespace GlideTween
             {
                 foreach (var add in toAdd)
                 {
-                    if (!tweens.ContainsKey(add.target))
+                    if (!tweens.ContainsKey(add.Target))
                     {
-                        tweens[add.target] = new List<Glide>();
+                        tweens[add.Target] = new List<Tween>();
                     }
 
-                    tweens[add.target].Add(add);
+                    tweens[add.Target].Add(add);
                 }
 
                 foreach (var remove in toRemove)
                 {
-                    List<Glide> list;
-                    if (tweens.TryGetValue(remove.target, out list))
+                    List<Tween> list;
+                    if (tweens.TryGetValue(remove.Target, out list))
                     {
                         list.Remove(remove);
                         if (list.Count == 0)
                         {
-                            tweens.Remove(remove.target);
+                            tweens.Remove(remove.Target);
                         }
                     }
                 }
@@ -187,11 +196,11 @@ namespace GlideTween
 
             #region Bulk control
 
-            private void ApplyBulkControl(object[] targets, Action<Glide> action)
+            private void ApplyBulkControl(object[] targets, Action<Tween> action)
             {
                 foreach (var target in targets)
                 {
-                    List<Glide> list;
+                    List<Tween> list;
                     if (tweens.TryGetValue(target, out list))
                     {
                         foreach (var glide in list)
