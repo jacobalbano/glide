@@ -52,7 +52,17 @@ namespace Glide
 			this.Target = Target;
 			Name = property;
 			
-			var type = Target.GetType();
+			
+			Type type = null;
+			if (IsType(Target))
+			{
+				type = (Type) Target;
+			}
+			else
+			{
+				type = Target.GetType();
+			}
+			
 			field = type.GetField(property, flags);
 			prop = type.GetProperty(property, flags);
 			
@@ -78,6 +88,27 @@ namespace Glide
 			}
 			
 			CheckPropertyType(Value.GetType(), property, Target.GetType().Name);
+		}
+		
+		bool IsType(object target)
+		{
+			var type = target.GetType();
+			var baseType = typeof(Type);
+			
+			if(type == baseType)
+				return true;
+			
+			var rootType = typeof(object);
+			
+			while( type != null && type != rootType )
+			{
+				var current = type.IsGenericType && baseType.IsGenericTypeDefinition ? type.GetGenericTypeDefinition() : type;
+				if( baseType == current )
+					return true;
+				type = type.BaseType;
+			}
+			
+			return false;
 		}
 		
 		private void CheckPropertyType(Type type, string prop, string targetTypeName)

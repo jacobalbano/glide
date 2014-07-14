@@ -31,8 +31,10 @@ namespace Glide
 
             /// <summary>
             /// Tweens a set of numeric properties on an object.
+            /// To tween instance properties/fields, pass the object.
+            /// To tween static properties/fields, pass the type of the object, using typeof(ObjectType) or object.GetType().
             /// </summary>
-            /// <param name="target">The object to tween.</param>
+            /// <param name="target">The object or type to tween.</param>
             /// <param name="values">The values to tween to, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
             /// <param name="duration">Duration of the tween in seconds.</param>
             /// <param name="delay">Delay before the tween starts, in seconds.</param>
