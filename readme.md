@@ -1,14 +1,14 @@
 Glide is a super-simple tweening library for C#.
 
 # Installation
- 1. Copy GlideManager.cs, Glide.cs, GlideInfo.cs, and Ease.cs into your project folder.
+ 1. Copy Tweener.cs, Tween.cs, GlideInfo.cs, and Ease.cs into your project folder.
  2. There is no step two.
 
 # Use
-Create a Glide instance and use it to manage tweens:
+Create a Tweener instance and use it to manage tweens:
     
 ```csharp
-var Tweener = new GlideManager();
+var Tweener = new Tweener();
 Tweener.Tween(...);
 ```
 
