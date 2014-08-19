@@ -53,11 +53,9 @@ namespace Glide
 		}
 
         internal void Update()
-		{	
+		{
 			if (paused)
-			{
 				return;
-			}
 			
 			if (Delay > 0)
 			{
@@ -71,12 +69,12 @@ namespace Glide
 					begin();
 			}
 			
-			
 			if (update != null)
 				update();
 			
 			time += elapsed;
 			float t = time / Duration;
+			bool doComplete = false;
 			
 			if (time >= Duration)
 			{
@@ -87,23 +85,15 @@ namespace Glide
 				}
 				else if (repeatCount < 0)
 				{
-					if (complete != null)
-					{
-						complete();
-					}
-					
+					doComplete = true;
 					time = t = 0;
 				}
 				else
 				{
-					if (complete != null)
-					{
-						complete();
-					}
-					
 					time = Duration;
 					t = 1;
                     parent.Remove(this);
+                    doComplete = true;
 				}
 				
 				if (time == 0)
@@ -111,22 +101,23 @@ namespace Glide
 					//	If the timer is zero here, we just restarted.
 					//	If reflect mode is on, flip start to end
 					if ((behavior & Behavior.Reflect) == Behavior.Reflect)
-					{
 						Reverse();
-					}
 				}
 			}
 			
 			if (ease != null)
-			{
 				t = ease(t);
-			}
 			
 			Interpolate(t);
+			
+			if (doComplete && complete != null)
+				complete();
 		}
         
         protected virtual void Interpolate(float t)
         {
+        	Console.WriteLine(t);
+        	
 			int i = vars.Count;			
 			while (i --> 0)
 			{
