@@ -116,8 +116,6 @@ namespace Glide
         
         protected virtual void Interpolate(float t)
         {
-        	Console.WriteLine(t);
-        	
 			int i = vars.Count;			
 			while (i --> 0)
 			{
