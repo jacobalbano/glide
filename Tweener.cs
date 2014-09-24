@@ -39,8 +39,11 @@ namespace Glide
             /// <param name="duration">Duration of the tween in seconds.</param>
             /// <param name="delay">Delay before the tween starts, in seconds.</param>
             /// <returns>The tween created, for setting properties on.</returns>
-            public Tween Tween(object target, object values, float duration, float delay = 0)
+            public Tween Tween<T>(T target, object values, float duration, float delay = 0) where T : class
             {
+            	if (target.GetType().IsValueType)
+            		throw new Exception("Target of tween cannot be a struct!");
+            	
                 var tween = new Tween();
 
                 tween.Target = target;

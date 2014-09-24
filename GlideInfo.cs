@@ -31,6 +31,7 @@ namespace Glide
 		
 		private FieldInfo field;
 		private PropertyInfo prop;
+		private bool isNumeric;
 		
 		private object Target;
 		
@@ -40,6 +41,16 @@ namespace Glide
 		{
 			get { return field != null ? field.GetValue(Target) : prop.GetValue(Target, null); }
 			set {
+				
+				if (isNumeric)
+				{
+					Type type = null;
+					if (field != null) type = field.FieldType;
+					if (prop != null) type = prop.PropertyType;
+					if (AnyEquals(type, numericTypes))
+						value = Convert.ChangeType(value, Type.GetTypeCode(type));
+				}
+				
 				if (field != null) 
 					field.SetValue(Target, value);
 				else
@@ -52,42 +63,43 @@ namespace Glide
 			this.Target = Target;
 			Name = property;
 			
-			
-			Type type = null;
+			Type targetType = null;
 			if (IsType(Target))
 			{
-				type = (Type) Target;
+				targetType = (Type) Target;
 			}
 			else
 			{
-				type = Target.GetType();
+				targetType = Target.GetType();
 			}
 			
-			field = type.GetField(property, flags);
-			prop = type.GetProperty(property, flags);
+			field = targetType.GetField(property, flags);
+			prop = targetType.GetProperty(property, flags);
 			
 			if (field == null)
 			{
 				if (prop == null)
 				{
 					//	Couldn't find either
-					throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", property, type.FullName));
+					throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", property, targetType.FullName));
 				}
 				else
 				{
 					if (!prop.CanRead)
 					{
-						throw new Exception(string.Format("Property '{0}' on object of type {1} has no setter accessor.", prop, type.FullName));
+						throw new Exception(string.Format("Property '{0}' on object of type {1} has no setter accessor.", prop, targetType.FullName));
 					}
 					
 					if (!prop.CanWrite && writeRequired)
 					{
-						throw new Exception(string.Format("Property '{0}' on object of type {1} has no getter accessor.", prop, type.FullName));
+						throw new Exception(string.Format("Property '{0}' on object of type {1} has no getter accessor.", prop, targetType.FullName));
 					}
 				}
 			}
 			
-			CheckPropertyType(Value.GetType(), property, Target.GetType().Name);
+			var valueType = Value.GetType();
+			isNumeric = AnyEquals(valueType, numericTypes);
+			CheckPropertyType(valueType, property, targetType.Name);
 		}
 		
 		bool IsType(object target)
@@ -121,7 +133,7 @@ namespace Glide
 		
 		protected virtual bool ValidatePropertyType(Type type)
 		{
-			return AnyEquals(type, numericTypes);
+			return isNumeric;
 		}
 		
 		static bool AnyEquals<T>(T value, params T[] options)
