@@ -22,7 +22,7 @@ namespace Glide
 #endregion
 
 #region Timing
-        protected bool paused;
+		public bool Paused { get; private set; }
         protected float Delay;
         protected float Duration;
 
@@ -41,6 +41,8 @@ namespace Glide
         
         public float TimeRemaining { get { return Duration - time; } }
         public float Completion { get { var c = time / Duration; return c < 0 ? 0 : (c > 1 ? 1 : c); } }
+        
+        public bool Looping { get { return repeatCount > 0; } }
 		
 		public Tween()
 		{
@@ -54,7 +56,7 @@ namespace Glide
 
         internal void Update()
 		{
-			if (paused)
+			if (Paused)
 				return;
 			
 			if (Delay > 0)
@@ -333,7 +335,7 @@ namespace Glide
 		/// </summary>
 		public void Pause()
 		{
-    		paused = true;
+    		Paused = true;
 		}
 		
 		/// <summary>
@@ -341,7 +343,7 @@ namespace Glide
 		/// </summary>
 		public void PauseToggle()
 		{
-			paused = !paused;
+			Paused = !Paused;
 		}
 		
 		/// <summary>
@@ -349,7 +351,7 @@ namespace Glide
 		/// </summary>
 		public void Resume()
 		{
-			paused = false;
+			Paused = false;
 		}
 #endregion
 	}

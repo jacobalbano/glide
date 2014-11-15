@@ -120,7 +120,7 @@ namespace Glide
             /// </summary>
             public void Pause()
             {
-                ApplyAll(glide => glide.paused = true);
+                ApplyAll(glide => glide.Paused = true);
             }
 
             /// <summary>
@@ -128,7 +128,7 @@ namespace Glide
             /// </summary>
             public void PauseToggle()
             {
-                ApplyAll(glide => glide.paused = !glide.paused);
+                ApplyAll(glide => glide.Paused = !glide.Paused);
             }
 
             /// <summary>
@@ -136,7 +136,7 @@ namespace Glide
             /// </summary>
             public void Resume()
             {
-                ApplyAll(glide => glide.paused = false);
+                ApplyAll(glide => glide.Paused = false);
             }
 
             /// <summary>
