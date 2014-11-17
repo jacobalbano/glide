@@ -174,12 +174,11 @@ namespace Glide
             {
                 foreach (var add in toAdd)
                 {
-                    if (!tweens.ContainsKey(add.Target))
-                    {
-                        tweens[add.Target] = new List<Tween>();
-                    }
+                	List<Tween> list = null;
+                	if (!tweens.TryGetValue(add.Target, out list))
+                		tweens[add.Target] = list = new List<Tween>();
 
-                    tweens[add.Target].Add(add);
+                    list.Add(add);
                 }
 
                 foreach (var remove in toRemove)
