@@ -22,7 +22,10 @@ namespace Glide
                 tweens = new Dictionary<object, List<Tween>>();
                 toRemove = new List<Tween>();
                 toAdd = new List<Tween>();
+                Approach = new Approach();
             }
+            
+            public Approach Approach { get; private set; }
 
             public static readonly Tweener Tweener;
             private static object _dummy;
@@ -41,6 +44,9 @@ namespace Glide
             /// <returns>The tween created, for setting properties on.</returns>
             public Tween Tween<T>(T target, object values, float duration, float delay = 0) where T : class
             {
+            	if (target == null)
+            		throw new ArgumentNullException("target");
+            	
             	if (target.GetType().IsValueType)
             		throw new Exception("Target of tween cannot be a struct!");
             	

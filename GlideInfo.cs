@@ -81,19 +81,9 @@ namespace Glide
 				if (prop == null)
 				{
 					//	Couldn't find either
-					throw new Exception(string.Format("Field or property '{0}' not found on object of type {1}.", property, targetType.FullName));
-				}
-				else
-				{
-					if (!prop.CanRead)
-					{
-						throw new Exception(string.Format("Property '{0}' on object of type {1} has no setter accessor.", prop, targetType.FullName));
-					}
-					
-					if (!prop.CanWrite && writeRequired)
-					{
-						throw new Exception(string.Format("Property '{0}' on object of type {1} has no getter accessor.", prop, targetType.FullName));
-					}
+					throw new Exception(string.Format("Field or {0} property '{1}' not found on object of type {2}.",
+						writeRequired ? "read/write" : "readable",
+						property, targetType.FullName));
 				}
 			}
 			
@@ -126,9 +116,7 @@ namespace Glide
 		private void CheckPropertyType(Type type, string prop, string targetTypeName)
 		{
 			if (!ValidatePropertyType(type))
-			{
 				throw new InvalidCastException(string.Format("Property is invalid: ({0} on {1}).", prop, targetTypeName));
-			}
 		}
 		
 		protected virtual bool ValidatePropertyType(Type type)

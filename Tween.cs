@@ -15,6 +15,16 @@ namespace Glide
 			Rotation,
 			Round
 		}
+		
+		[Flags]
+		public enum RotationUnit
+		{
+			Degrees,
+			Radians
+		}
+		
+		private const float DEG = (float) -180 / (float) Math.PI;
+		private const float RAD = (float) Math.PI / -180;
 
 #region Callbacks
 		private Func<float, float> ease;
@@ -32,6 +42,7 @@ namespace Glide
 
         private int repeatCount;
         private Behavior behavior;
+        private RotationUnit rotationUnit;
 
         private List<float> start, range, end;
         private List<GlideInfo> vars;
@@ -123,18 +134,21 @@ namespace Glide
 			{
 				float value = start[i] + range[i] * t;
 				if ((behavior & Behavior.Round) == Behavior.Round)
-				{
 					value = (float) Math.Round(value);
-				}
 				
 				if ((behavior & Behavior.Rotation) == Behavior.Rotation)
 				{
-					float angle = value % 360.0f;
-			
+					float angle = value;
+					if (rotationUnit == RotationUnit.Radians)
+						angle *= DEG;
+					
+					angle %= 360.0f;
+						
 					if (angle < 0)
-					{
 						angle += 360.0f;
-					}
+					
+					if (rotationUnit == RotationUnit.Radians)
+						angle *= RAD;
 					
 					value = angle;
 				}
@@ -268,9 +282,10 @@ namespace Glide
 		/// Whether this tween handles rotation.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
-		public Tween Rotation()
+		public Tween Rotation(RotationUnit unit = RotationUnit.Degrees)
 		{
 			behavior |= Behavior.Rotation;
+			rotationUnit = unit;
 			
 			int count = vars.Count;			
 			while (count --> 0)
