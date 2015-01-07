@@ -23,8 +23,8 @@ namespace Glide
 			Radians
 		}
 		
-		private const float DEG = (float) -180 / (float) Math.PI;
-		private const float RAD = (float) Math.PI / -180;
+		internal const float DEG = (float) -180 / (float) Math.PI;
+		internal const float RAD = (float) Math.PI / -180;
 
 #region Callbacks
 		private Func<float, float> ease;

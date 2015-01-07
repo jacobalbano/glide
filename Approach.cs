@@ -4,7 +4,7 @@ using System;
 namespace Glide
 {
 	/// <summary>
-	/// A collection of stateless functions that allow 
+	/// A collection of stateless easing functions.
 	/// </summary>
 	public class Approach
 	{
