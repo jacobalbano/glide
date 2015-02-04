@@ -23,7 +23,16 @@ namespace Glide
 			target += (to - target) * amount;
 		}
 		
-		
+		/// <summary>
+		/// Smoothly change an angle to point at a position.
+		/// </summary>
+		/// <param name="x">The x position of the object to be rotated.</param>
+		/// <param name="y">The y position of the object to be rotated.</param>
+		/// <param name="targetX">The x position of the object to aim towards.</param>
+		/// <param name="targetY">The y position of the object to aim towards.</param>
+		/// <param name="currentAngle">The angle of the object to be rotated.</param>
+		/// <param name="lookEase">How drastic the approach should be. Default to 0.3 (3/10 of the distance).</param>
+		/// <returns>The resulting angle, in degrees.</returns>
 		public float Angle(float x, float y, float targetX, float targetY, float currentAngle, float lookEase = 0.3f)
 		{
 			currentAngle *= RAD;
