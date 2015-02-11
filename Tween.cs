@@ -287,11 +287,18 @@ namespace Glide
 			behavior |= Behavior.Rotation;
 			rotationUnit = unit;
 			
-			int count = vars.Count;			
-			while (count --> 0)
+			int i = vars.Count;			
+			while (i --> 0)
 			{
-				float angle = start[count];
-				float r = angle + range[count];
+				float angle = start[i];
+				
+				if (rotationUnit == RotationUnit.Radians)
+					angle *= DEG;
+				
+				if (angle < 0)
+					angle = 360 + angle;
+				
+				float r = angle + range[i];
 					
 				float d = r - angle;
 				float a = (float) Math.Abs(d);
@@ -309,7 +316,7 @@ namespace Glide
 					r = 180;
 				}
 				
-				range[count] = r;
+				range[i] = r;
 			}
 			
 			return this;
