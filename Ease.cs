@@ -33,6 +33,7 @@ namespace Glide
 		/// <returns>Eased timescale.</returns>
 		public static float ElasticOut(float t)
 		{
+			if (t == 1) return 1;
 			return (float) ( Math.Sin(-13 * PI2 * (t + 1)) * Math.Pow(2, -10 * t) + 1);
 		}
 		
@@ -178,6 +179,7 @@ namespace Glide
 		/// <returns>Eased timescale.</returns>
 		public static float SineIn(float t)
 		{
+			if (t == 1) return 1;
 			return (float) ( -Math.Cos(PI2 * t) + 1);
 		}
 		
@@ -297,6 +299,7 @@ namespace Glide
 		/// <returns>Eased timescale.</returns>
 		public static float ExpoOut(float t)
 		{
+			if (t == 1) return 1;
 			return (float) ( -Math.Pow(2, -10 * t) + 1);
 		}
 		
@@ -307,6 +310,7 @@ namespace Glide
 		/// <returns>Eased timescale.</returns>
 		public static float ExpoInOut(float t)
 		{
+			if (t == 1) return 1;
 			return (float) ( t < .5 ? Math.Pow(2, 10 * (t * 2 - 1)) / 2 : (-Math.Pow(2, -10 * (t * 2 - 1)) + 2) / 2);
 		}
 		
