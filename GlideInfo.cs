@@ -36,7 +36,7 @@ namespace Glide
 			this.Target = Target;
 			PropertyName = property;
 			
-			var targetType = Target.GetType() == typeof(Type) ? (Type) Target : Target.GetType();
+			var targetType = Target as Type ?? Target.GetType();
 			
 			field = targetType.GetField(property, flags);
 			prop = targetType.GetProperty(property, flags);

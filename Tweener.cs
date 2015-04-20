@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Glide;
-using Indigo;
-using Indigo.Core;
 
 namespace Glide
 {

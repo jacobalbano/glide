@@ -19,6 +19,6 @@ namespace Glide
 		protected const float RAD = (float) Math.PI / 180f;
 		
 		public abstract void Initialize(Object fromValue, Object toValue, Behavior behavior);
-		public abstract object Interpolate(float t, object current, Behavior behavior);
+		public abstract object Interpolate(float t, object currentValue, Behavior behavior);
 	}
 }

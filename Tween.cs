@@ -156,10 +156,10 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween From(object values)
 		{
-			var fromProps = values.GetType().GetProperties();
-			for (int i = 0; i < fromProps.Length; ++i)
+			var props = values.GetType().GetProperties();
+			for (int i = 0; i < props.Length; ++i)
 			{
-				var property = fromProps[i];
+				var property = props[i];
 				var propValue = property.GetValue(values, null);
 				
 				int index = -1;
