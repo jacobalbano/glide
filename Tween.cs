@@ -8,23 +8,11 @@ namespace Glide
 	public partial class Tween
 	{
 		[Flags]
-		private enum Behavior
-		{
-			None,
-			Reflect,
-			Rotation,
-			Round
-		}
-		
-		[Flags]
 		public enum RotationUnit
 		{
 			Degrees,
 			Radians
 		}
-		
-		internal const float DEG = (float) -180 / (float) Math.PI;
-		internal const float RAD = (float) Math.PI / -180;
 
 #region Callbacks
 		private Func<float, float> ease;
@@ -33,40 +21,63 @@ namespace Glide
 
 #region Timing
 		public bool Paused { get; private set; }
-        protected float Delay;
-        protected float Duration;
+        private float Delay;
+        private float Duration;
 
         private float time;
         private float elapsed;
 #endregion
-
+		
+		private bool firstUpdate;
         private int repeatCount;
-        private Behavior behavior;
-        private RotationUnit rotationUnit;
-
-        private List<float> start, range, end;
+        private Lerper.Behavior behavior;
+        
         private List<GlideInfo> vars;
+        private List<Lerper> lerpers;
+        private List<object> start, end;
+        private Dictionary<string, int> varHash;
 
-        protected object Target;
+        private object Target;
         private Tween.TweenerImpl parent;
         
+		/// <summary>
+		/// The time remaining before the tween ends or repeats.
+		/// </summary>
         public float TimeRemaining { get { return Duration - time; } }
+        
+        /// <summary>
+        /// A value between 0 and 1, where 0 means the tween has not been started and 1 means that it has completed.
+        /// </summary>
         public float Completion { get { var c = time / Duration; return c < 0 ? 0 : (c > 1 ? 1 : c); } }
         
-        public bool Looping { get { return repeatCount > 0; } }
+        public bool Looping { get { return repeatCount != 0; } }
 		
 		public Tween()
 		{
+			firstUpdate = true;
 			elapsed = 0;
 			
+			varHash = new Dictionary<string, int>();
 			vars = new List<GlideInfo>();
-			start = new List<float>();
-			range = new List<float>();
-			end = new List<float>();
+			lerpers = new List<Lerper>();
+			start = new List<object>();
+			end = new List<object>();
+			behavior = Lerper.Behavior.None;
 		}
 
         internal void Update()
 		{
+        	if (firstUpdate)
+        	{
+        		firstUpdate = false;
+        		
+				var i = vars.Count;
+				while (i --> 0)
+				{
+					lerpers[i].Initialize(start[i], end[i], behavior);
+				}
+        	}
+        	
 			if (Paused)
 				return;
 			
@@ -81,9 +92,6 @@ namespace Glide
 				if (begin != null)
 					begin();
 			}
-			
-			if (update != null)
-				update();
 			
 			time += elapsed;
 			float t = time / Duration;
@@ -113,7 +121,7 @@ namespace Glide
 				{
 					//	If the timer is zero here, we just restarted.
 					//	If reflect mode is on, flip start to end
-					if ((behavior & Behavior.Reflect) == Behavior.Reflect)
+					if (behavior.HasFlag(Lerper.Behavior.Reflect))
 						Reverse();
 				}
 			}
@@ -123,37 +131,19 @@ namespace Glide
 			
 			Interpolate(t);
 			
+			if (update != null)
+				update();
+			
 			if (doComplete && complete != null)
 				complete();
 		}
         
-        protected virtual void Interpolate(float t)
+        protected void Interpolate(float t)
         {
 			int i = vars.Count;			
 			while (i --> 0)
 			{
-				float value = start[i] + range[i] * t;
-				if ((behavior & Behavior.Round) == Behavior.Round)
-					value = (float) Math.Round(value);
-				
-				if ((behavior & Behavior.Rotation) == Behavior.Rotation)
-				{
-					float angle = value;
-					if (rotationUnit == RotationUnit.Radians)
-						angle *= DEG;
-					
-					angle %= 360.0f;
-						
-					if (angle < 0)
-						angle += 360.0f;
-					
-					if (rotationUnit == RotationUnit.Radians)
-						angle *= RAD;
-					
-					value = angle;
-				}
-				
-				vars[i].Value = value;
+				vars[i].Value = lerpers[i].Interpolate(t, vars[i].Value, behavior);
 			}
         }
 		
@@ -165,28 +155,23 @@ namespace Glide
 		/// <param name="values">The values to apply, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
 		/// <returns>A reference to this.</returns>
 		public Tween From(object values)
-		{			
-			foreach (PropertyInfo property in values.GetType().GetProperties())
+		{
+			var fromProps = values.GetType().GetProperties();
+			for (int i = 0; i < fromProps.Length; ++i)
 			{
-				int index = vars.FindIndex(i => String.Compare(i.Name, property.Name, true) == 0);
-				if (index >= 0)
+				var property = fromProps[i];
+				var propValue = property.GetValue(values, null);
+				
+				int index = -1;
+				if (varHash.TryGetValue(property.Name, out index))
 				{
 					//	if we're already tweening this value, adjust the range
-					var info = vars[index];
-					
-					var to = new GlideInfo(values, property.Name, false);
-					info.Value = to.Value;
+					start[index] = propValue;
+				}
 				
-					start[index] = Convert.ToSingle(info.Value);
-					range[index] = this.end[index] - start[index];
-				}
-				else
-				{
-					//	if we aren't tweening this value, just set it
-					var info = new GlideInfo(Target, property.Name, true);
-					var to = new GlideInfo(values, property.Name, false);
-					info.Value = to.Value;
-				}
+				//	if we aren't tweening this value, just set it
+				var info = new GlideInfo(Target, property.Name, true);
+				info.Value = propValue;
 			}
 			
 			return this;
@@ -254,7 +239,7 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween Reflect()
 		{
-			behavior |= Behavior.Reflect;
+			behavior |= Lerper.Behavior.Reflect;
 			return this;
 		}
 		
@@ -262,17 +247,19 @@ namespace Glide
 		/// Swaps the start and end values of the tween.
 		/// </summary>
 		/// <returns>A reference to this.</returns>
-		public virtual Tween Reverse()
+		public Tween Reverse()
 		{	
-			int count = vars.Count;			
-			while (count --> 0)
+			int i = vars.Count;			
+			while (i --> 0)
 			{
-				float s = start[count];
-				float r = range[count];
+				var s = start[i];
+				var e = end[i];
 				
 				//	Set start to end and end to start
-				start[count] = s + r;
-				range[count] = s - (s + r);
+				start[i] = e;
+				end[i] = s;
+				
+				lerpers[i].Initialize(e, s, behavior);
 			}
 			
 			return this;
@@ -284,41 +271,9 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween Rotation(RotationUnit unit = RotationUnit.Degrees)
 		{
-			behavior |= Behavior.Rotation;
-			rotationUnit = unit;
-			
-			int i = vars.Count;			
-			while (i --> 0)
-			{
-				float angle = start[i];
-				
-				if (rotationUnit == RotationUnit.Radians)
-					angle *= DEG;
-				
-				if (angle < 0)
-					angle = 360 + angle;
-				
-				float r = angle + range[i];
-					
-				float d = r - angle;
-				float a = (float) Math.Abs(d);
-				
-				if (a > 181)
-				{
-					r = (360 - a) * (d > 0 ? -1 : 1);
-				}
-				else if (a < 179)
-				{
-					r = d;
-				}
-				else
-				{
-					r = 180;
-				}
-				
-				range[i] = r;
-			}
-			
+			behavior |= Lerper.Behavior.Rotation;
+			behavior |= (unit == RotationUnit.Degrees) ? Lerper.Behavior.RotationDegrees : Lerper.Behavior.RotationRadians;
+
 			return this;
 		}
 		
@@ -328,12 +283,23 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween Round()
 		{
-			behavior |= Behavior.Round;
+			behavior |= Lerper.Behavior.Round;
 			return this;
 		}
 #endregion
 				
 #region Control
+		private void AddLerp(Lerper lerper, GlideInfo info, object from, object to)
+		{
+			varHash.Add(info.PropertyName, vars.Count);
+			vars.Add(info);
+			
+			start.Add(from);
+			end.Add(to);
+			
+			lerpers.Add(lerper);
+		}
+		
 		/// <summary>
 		/// Remove tweens from the tweener without calling their complete functions.
 		/// </summary>
