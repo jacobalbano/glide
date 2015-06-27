@@ -17,6 +17,22 @@ namespace Glide
 		const float B6 = 2.625f / 2.75f;
 		
 		/// <summary>
+		/// Ease a value to its target and then back. Use this to wrap another easing function.
+		/// </summary>
+		public static Func<float, float> ToAndFro(Func<float, float> easer)
+		{
+			return t => ToAndFro(easer(t));
+		}
+		
+		/// <summary>
+		/// Ease a value to its target and then back.
+		/// </summary>
+		public static float ToAndFro(float t)
+		{
+			return t < 0.5f ? t * 2 : 1 + ((t - 0.5f) / 0.5f) * -1;
+		}
+		
+		/// <summary>
 		/// Elastic in.
 		/// </summary>
 		/// <param name="t">Time elapsed.</param>

@@ -21,7 +21,7 @@ namespace Glide
 
 #region Timing
 		public bool Paused { get; private set; }
-        private float Delay;
+        private float Delay, repeatDelay;
         private float Duration;
 
         private float time;
@@ -29,7 +29,7 @@ namespace Glide
 #endregion
 		
 		private bool firstUpdate;
-        private int repeatCount;
+        private int repeatCount, timesRepeated;
         private Lerper.Behavior behavior;
         
         private List<GlideInfo> vars;
@@ -73,9 +73,7 @@ namespace Glide
         		
 				var i = vars.Count;
 				while (i --> 0)
-				{
 					lerpers[i].Initialize(start[i], end[i], behavior);
-				}
         	}
         	
 			if (Paused)
@@ -84,30 +82,31 @@ namespace Glide
 			if (Delay > 0)
 			{
 				Delay -= elapsed;
-				return;
+				if (Delay > 0)
+					return;
 			}
 			
-			if (time == 0)
-			{
-				if (begin != null)
-					begin();
-			}
+			if (time == 0 && timesRepeated == 0)
+				if (begin != null) begin();
 			
 			time += elapsed;
+			float setTimeTo = time;
 			float t = time / Duration;
 			bool doComplete = false;
 			
 			if (time >= Duration)
 			{
-				if (repeatCount > 0)
+				if (repeatCount != 0)
 				{
-					--repeatCount;
-					time = t = 0;
-				}
-				else if (repeatCount < 0)
-				{
-					doComplete = true;
-					time = t = 0;
+					setTimeTo = 0;
+					Delay = repeatDelay;
+					timesRepeated++;
+					
+					if (repeatCount > 0)
+						--repeatCount;
+					
+					if (repeatCount < 0)
+						doComplete = true;
 				}
 				else
 				{
@@ -116,14 +115,6 @@ namespace Glide
                     parent.Remove(this);
                     doComplete = true;
 				}
-				
-				if (time == 0)
-				{
-					//	If the timer is zero here, we just restarted.
-					//	If reflect mode is on, flip start to end
-					if (behavior.HasFlag(Lerper.Behavior.Reflect))
-						Reverse();
-				}
 			}
 			
 			if (ease != null)
@@ -131,11 +122,17 @@ namespace Glide
 			
 			Interpolate(t);
 			
-			if (update != null)
-				update();
+			time = setTimeTo;
 			
-			if (doComplete && complete != null)
-				complete();
+			//	If the timer is zero here, we just restarted.
+			//	If reflect mode is on, flip start to end
+			if (time == 0 && behavior.HasFlag(Lerper.Behavior.Reflect))
+				Reverse();
+			
+			if (update != null) update();
+			
+			if (doComplete)
+				if (complete != null) complete();
 		}
         
         protected void Interpolate(float t)
@@ -148,7 +145,6 @@ namespace Glide
         }
 		
 #region Behavior
-		
 		/// <summary>
 		/// Apply target values to a starting point before tweening.
 		/// </summary>
@@ -189,36 +185,39 @@ namespace Glide
 		}
 		
 		/// <summary>
-		/// Set a function to call when the tween begins (useful when using delays).
+		/// Set a function to call when the tween begins (useful when using delays). Can be called multiple times for compound callbacks.
 		/// </summary>
 		/// <param name="callback">The function that will be called when the tween starts, after the delay.</param>
 		/// <returns>A reference to this.</returns>
 		public Tween OnBegin(Action callback)
 		{
-			begin = callback;
+			if (begin == null) begin = callback;
+			else begin += callback;
 			return this;
 		}
 		
 		/// <summary>
-		/// Set a function to call when the tween finishes.
+		/// Set a function to call when the tween finishes. Can be called multiple times for compound callbacks.
 		/// If the tween repeats infinitely, this will be called each time; otherwise it will only run when the tween is finished repeating.
 		/// </summary>
 		/// <param name="callback">The function that will be called on tween completion.</param>
 		/// <returns>A reference to this.</returns>
 		public Tween OnComplete(Action callback)
 		{
-			complete = callback;
+			if (complete == null) complete = callback;
+			else complete += callback;
 			return this;
 		}
 		
 		/// <summary>
-		/// Set a function to call as the tween updates.
+		/// Set a function to call as the tween updates. Can be called multiple times for compound callbacks.
 		/// </summary>
 		/// <param name="callback">The function to use.</param>
 		/// <returns>A reference to this.</returns>
 		public Tween OnUpdate(Action callback)
 		{
-			update = callback;
+			if (update == null) update = callback;
+			else update += callback;
 			return this;
 		}
 		
@@ -230,6 +229,17 @@ namespace Glide
 		public Tween Repeat(int times = -1)
 		{
 			repeatCount = times;
+			return this;
+		}
+		
+		/// <summary>
+		/// Set a delay for when the tween repeats.
+		/// </summary>
+		/// <param name="delay">How long to wait before repeating.</param>
+		/// <returns>A reference to this.</returns>
+		public Tween RepeatDelay(float delay)
+		{
+			repeatDelay = delay;
 			return this;
 		}
 		

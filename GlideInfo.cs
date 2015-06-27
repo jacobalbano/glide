@@ -31,12 +31,28 @@ namespace Glide
 			}
 		}
 		
-		public GlideInfo(object Target, string property, bool writeRequired = true)
+		public GlideInfo(object target, PropertyInfo info)
 		{
-			this.Target = Target;
+			Target = target;
+			prop = info;
+			PropertyName = info.Name;
+			PropertyType = prop.PropertyType;
+		}
+		
+		public GlideInfo(object target, FieldInfo info)
+		{
+			Target = target;
+			field = info;
+			PropertyName = info.Name;
+			PropertyType = info.FieldType;
+		}
+		
+		public GlideInfo(object target, string property, bool writeRequired = true)
+		{
+			Target = target;
 			PropertyName = property;
 			
-			var targetType = Target as Type ?? Target.GetType();
+			var targetType = target as Type ?? target.GetType();
 			
 			field = targetType.GetField(property, flags);
 			prop = targetType.GetProperty(property, flags);
