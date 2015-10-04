@@ -25,7 +25,6 @@ namespace Glide
         private float Duration;
 
         private float time;
-        private float elapsed;
 #endregion
 		
 		private bool firstUpdate;
@@ -55,7 +54,6 @@ namespace Glide
 		public Tween()
 		{
 			firstUpdate = true;
-			elapsed = 0;
 			
 			varHash = new Dictionary<string, int>();
 			vars = new List<GlideInfo>();
@@ -65,7 +63,7 @@ namespace Glide
 			behavior = Lerper.Behavior.None;
 		}
 
-        internal void Update()
+        internal void Update(float elapsed)
 		{
         	if (firstUpdate)
         	{
@@ -73,7 +71,10 @@ namespace Glide
         		
 				var i = vars.Count;
 				while (i --> 0)
-					lerpers[i].Initialize(start[i], end[i], behavior);
+				{
+					if (lerpers[i] != null)
+						lerpers[i].Initialize(start[i], end[i], behavior);
+				}
         	}
         	
 			if (Paused)
@@ -140,7 +141,8 @@ namespace Glide
 			int i = vars.Count;			
 			while (i --> 0)
 			{
-				vars[i].Value = lerpers[i].Interpolate(t, vars[i].Value, behavior);
+				if (vars[i] != null)
+					vars[i].Value = lerpers[i].Interpolate(t, vars[i].Value, behavior);
 			}
         }
 		
@@ -308,6 +310,31 @@ namespace Glide
 			end.Add(to);
 			
 			lerpers.Add(lerper);
+		}
+		
+		/// <summary>
+		/// Cancel tweening given properties.
+		/// </summary>
+		/// <param name="properties"></param>
+		public void Cancel(params string[] properties)
+		{
+			var canceled = 0;
+			for (int i = 0; i < properties.Length; i++) {
+				var index = 0;
+				if (!varHash.TryGetValue(properties[i], out index))
+					continue;
+				
+				varHash.Remove(properties[i]);
+				vars[index] = null;
+				lerpers[index] = null;
+				start[index] = null;
+				end[index] = null;
+				
+				canceled++;
+			}
+			
+			if (canceled == vars.Count)
+				Cancel();
 		}
 		
 		/// <summary>

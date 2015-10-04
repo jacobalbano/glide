@@ -56,8 +56,9 @@ namespace Glide
             /// <param name="values">The values to tween to, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
             /// <param name="duration">Duration of the tween in seconds.</param>
             /// <param name="delay">Delay before the tween starts, in seconds.</param>
+            /// <param name="overwrite">Whether pre-existing tweens should be overwritten if this tween involves the same properties.</param>
             /// <returns>The tween created, for setting properties on.</returns>
-            public Tween Tween<T>(T target, object values, float duration, float delay = 0) where T : class
+            public Tween Tween<T>(T target, object values, float duration, float delay = 0, bool overwrite = true) where T : class
             {
             	if (target == null)
             		throw new ArgumentNullException("target");
@@ -72,14 +73,22 @@ namespace Glide
                 tween.Duration = duration;
                 tween.Delay = delay;
                 tween.parent = this;
+                AddAndRemove();
             	toAdd.Add(tween);
 
                 if (values == null) // in case of timer
                     return tween;
-
+                
                 var props = values.GetType().GetProperties();
                 for (int i = 0; i < props.Length; ++i)
                 {
+                	List<Tween> library = null;
+                	if (overwrite && tweens.TryGetValue(target, out library))
+                	{
+                		for (int j = 0; j < library.Count; j++)
+                			library[j].Cancel(props[i].Name);
+                	}
+                	
                 	var property = props[i];
                     var info = new GlideInfo(target, property.Name);
                     var to = new GlideInfo(values, property.Name, false);
@@ -176,11 +185,7 @@ namespace Glide
             public void Update(float secondsElapsed)
             {
             	for (int i = 0; i < allTweens.Count; ++i)
-            	{
-            		var tween = allTweens[i];
-                    tween.elapsed = secondsElapsed;
-                    tween.Update();
-            	}
+            		allTweens[i].Update(secondsElapsed);
 
                 AddAndRemove();
             }

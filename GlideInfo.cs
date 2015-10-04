@@ -54,14 +54,11 @@ namespace Glide
 			
 			var targetType = target as Type ?? target.GetType();
 			
-			field = targetType.GetField(property, flags);
-			prop = targetType.GetProperty(property, flags);
-			
-			if (field != null)
+			if ((field = targetType.GetField(property, flags)) != null)
 			{
 				PropertyType = field.FieldType;
 			}
-			else if (prop != null)
+			else if ((prop = targetType.GetProperty(property, flags)) != null)
 			{
 				PropertyType = prop.PropertyType;
 			}
