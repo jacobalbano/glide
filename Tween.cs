@@ -35,9 +35,8 @@ namespace Glide
         private List<Lerper> lerpers;
         private List<object> start, end;
         private Dictionary<string, int> varHash;
-
-        private object Target;
-        private Tween.TweenerImpl parent;
+        private TweenerImpl Parent;
+        private IRemoveTweens Remover;
         
 		/// <summary>
 		/// The time remaining before the tween ends or repeats.
@@ -49,10 +48,24 @@ namespace Glide
         /// </summary>
         public float Completion { get { var c = time / Duration; return c < 0 ? 0 : (c > 1 ? 1 : c); } }
         
+        /// <summary>
+        /// Whether the tween is currently looping.
+        /// </summary>
         public bool Looping { get { return repeatCount != 0; } }
+        
+        /// <summary>
+        /// The object this tween targets. Will be null if the tween represents a timer.
+        /// </summary>
+        public object Target { get; private set; }
 		
-		public Tween()
+		private Tween(object target, float duration, float delay, Tween.TweenerImpl parent)
 		{
+            Target = target;
+            Duration = duration;
+            Delay = delay;
+            Parent = parent;
+            Remover = parent;
+            
 			firstUpdate = true;
 			
 			varHash = new Dictionary<string, int>();
@@ -63,7 +76,18 @@ namespace Glide
 			behavior = Lerper.Behavior.None;
 		}
 
-        internal void Update(float elapsed)
+		private void AddLerp(Lerper lerper, GlideInfo info, object from, object to)
+		{
+			varHash.Add(info.PropertyName, vars.Count);
+			vars.Add(info);
+			
+			start.Add(from);
+			end.Add(to);
+			
+			lerpers.Add(lerper);
+		}
+		
+        private void Update(float elapsed)
 		{
         	if (firstUpdate)
         	{
@@ -76,75 +100,73 @@ namespace Glide
 						lerpers[i].Initialize(start[i], end[i], behavior);
 				}
         	}
-        	
-			if (Paused)
-				return;
-			
-			if (Delay > 0)
-			{
-				Delay -= elapsed;
-				if (Delay > 0)
+        	else
+        	{
+				if (Paused)
 					return;
-			}
-			
-			if (time == 0 && timesRepeated == 0)
-				if (begin != null) begin();
-			
-			time += elapsed;
-			float setTimeTo = time;
-			float t = time / Duration;
-			bool doComplete = false;
-			
-			if (time >= Duration)
-			{
-				if (repeatCount != 0)
+				
+				if (Delay > 0)
 				{
-					setTimeTo = 0;
-					Delay = repeatDelay;
-					timesRepeated++;
-					
-					if (repeatCount > 0)
-						--repeatCount;
-					
-					if (repeatCount < 0)
-						doComplete = true;
+					Delay -= elapsed;
+					if (Delay > 0)
+						return;
 				}
-				else
+				
+				if (time == 0 && timesRepeated == 0 && begin != null)
+					begin();
+				
+				time += elapsed;
+				float setTimeTo = time;
+				float t = time / Duration;
+				bool doComplete = false;
+				
+				if (time >= Duration)
 				{
-					time = Duration;
-					t = 1;
-                    parent.Remove(this);
-                    doComplete = true;
+					if (repeatCount != 0)
+					{
+						setTimeTo = 0;
+						Delay = repeatDelay;
+						timesRepeated++;
+						
+						if (repeatCount > 0)
+							--repeatCount;
+						
+						if (repeatCount < 0)
+							doComplete = true;
+					}
+					else
+					{
+						time = Duration;
+						t = 1;
+	                    Remover.Remove(this);
+	                    doComplete = true;
+					}
 				}
-			}
-			
-			if (ease != null)
-				t = ease(t);
-			
-			Interpolate(t);
-			
-			time = setTimeTo;
-			
-			//	If the timer is zero here, we just restarted.
-			//	If reflect mode is on, flip start to end
-			if (time == 0 && behavior.HasFlag(Lerper.Behavior.Reflect))
-				Reverse();
-			
-			if (update != null) update();
-			
-			if (doComplete)
-				if (complete != null) complete();
+				
+				if (ease != null)
+					t = ease(t);
+				
+				int i = vars.Count;
+				while (i --> 0)
+				{
+					if (vars[i] != null)
+						vars[i].Value = lerpers[i].Interpolate(t, vars[i].Value, behavior);
+				}
+				
+				time = setTimeTo;
+				
+				//	If the timer is zero here, we just restarted.
+				//	If reflect mode is on, flip start to end
+				if (time == 0 && behavior.HasFlag(Lerper.Behavior.Reflect))
+					Reverse();
+				
+				if (update != null)
+					update();
+				
+				if (doComplete && complete != null)
+					complete();
+        	}
 		}
-        
-        protected void Interpolate(float t)
-        {
-			int i = vars.Count;			
-			while (i --> 0)
-			{
-				if (vars[i] != null)
-					vars[i].Value = lerpers[i].Interpolate(t, vars[i].Value, behavior);
-			}
-        }
 		
 #region Behavior
 		/// <summary>
@@ -301,17 +323,6 @@ namespace Glide
 #endregion
 				
 #region Control
-		private void AddLerp(Lerper lerper, GlideInfo info, object from, object to)
-		{
-			varHash.Add(info.PropertyName, vars.Count);
-			vars.Add(info);
-			
-			start.Add(from);
-			end.Add(to);
-			
-			lerpers.Add(lerper);
-		}
-		
 		/// <summary>
 		/// Cancel tweening given properties.
 		/// </summary>
@@ -319,7 +330,8 @@ namespace Glide
 		public void Cancel(params string[] properties)
 		{
 			var canceled = 0;
-			for (int i = 0; i < properties.Length; i++) {
+			for (int i = 0; i < properties.Length; ++i)
+			{
 				var index = 0;
 				if (!varHash.TryGetValue(properties[i], out index))
 					continue;
@@ -342,7 +354,7 @@ namespace Glide
 		/// </summary>
 		public void Cancel()
 		{
-            parent.Remove(this);
+            Remover.Remove(this);
 		}
 		
 		/// <summary>
@@ -352,7 +364,7 @@ namespace Glide
 		{
 			time = Duration;
 			update = null;
-            parent.Remove(this);
+            Remover.Remove(this);
 		}
 		
 		/// <summary>

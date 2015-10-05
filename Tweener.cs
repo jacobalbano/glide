@@ -5,15 +5,20 @@ using Glide;
 
 namespace Glide
 {
-    public class Tweener : Tween.TweenerImpl {}
-    public partial class Tween
-    {
-        public class TweenerImpl
-        {
-            static TweenerImpl()
-            {
-                _dummy = new {};
-                registeredLerpers = new Dictionary<Type, ConstructorInfo>();
+	public class Tweener : Tween.TweenerImpl {};
+	
+	public partial class Tween
+	{
+		private interface IRemoveTweens	//	lol get it
+		{
+			void Remove(Tween t);
+		}
+		
+		public class TweenerImpl : IRemoveTweens
+	    {
+	        static TweenerImpl()
+	        {
+	            registeredLerpers = new Dictionary<Type, ConstructorInfo>();
 				var numericTypes = new Type[] {
 					typeof(Int16),
 					typeof(Int32),
@@ -24,82 +29,161 @@ namespace Glide
 					typeof(Single),
 					typeof(Double)
 				};
-                
-                for (int i = 0; i < numericTypes.Length; i++)
-                	SetLerper<NumericLerper>(numericTypes[i]);
-            }
-            
-            public static void SetLerper<T>(Type type) where T : Lerper, new()
+	            
+	            for (int i = 0; i < numericTypes.Length; i++)
+	            	SetLerper<NumericLerper>(numericTypes[i]);
+	        }
+	        
+	        /// <summary>
+	        /// Associate a Lerper class with a property type.
+	        /// </summary>
+	        /// <typeparam name="TLerper">The Lerper class to use for properties of the given type.</typeparam>
+	        /// <param name="type">The type of the property to associate the given Lerper with.</param>
+	        public static void SetLerper<TLerper>(Type propertyType) where TLerper : Lerper, new()
 			{
-            	registeredLerpers[type] = typeof(T).GetConstructor(Type.EmptyTypes);
+	        	registeredLerpers[propertyType] = typeof(TLerper).GetConstructor(Type.EmptyTypes);
 			}
-
-            public TweenerImpl()
-            {
-                tweens = new Dictionary<object, List<Tween>>();
-                toRemove = new List<Tween>();
-                toAdd = new List<Tween>();
-                allTweens = new List<Tween>();
-            }
-            
-            private static object _dummy;
-            private static Dictionary<Type, ConstructorInfo> registeredLerpers;
-            private Dictionary<object, List<Tween>> tweens;
-            private List<Tween> toRemove, toAdd, allTweens;
-
-            /// <summary>
-            /// <para>Tweens a set of properties on an object.</para>
-            /// <para>To tween instance properties/fields, pass the object.</para>
-            /// <para>To tween static properties/fields, pass the type of the object, using typeof(ObjectType) or object.GetType().</para>
-            /// </summary>
-            /// <param name="target">The object or type to tween.</param>
-            /// <param name="values">The values to tween to, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
-            /// <param name="duration">Duration of the tween in seconds.</param>
-            /// <param name="delay">Delay before the tween starts, in seconds.</param>
-            /// <param name="overwrite">Whether pre-existing tweens should be overwritten if this tween involves the same properties.</param>
-            /// <returns>The tween created, for setting properties on.</returns>
-            public Tween Tween<T>(T target, object values, float duration, float delay = 0, bool overwrite = true) where T : class
-            {
-            	if (target == null)
-            		throw new ArgumentNullException("target");
-            	
-            	var targetType = target.GetType();
-            	if (targetType.IsValueType)
-            		throw new Exception("Target of tween cannot be a struct!");
-            	
-                var tween = new Tween();
-
-                tween.Target = target;
-                tween.Duration = duration;
-                tween.Delay = delay;
-                tween.parent = this;
-                AddAndRemove();
-            	toAdd.Add(tween);
-
-                if (values == null) // in case of timer
-                    return tween;
-                
-                var props = values.GetType().GetProperties();
-                for (int i = 0; i < props.Length; ++i)
-                {
-                	List<Tween> library = null;
-                	if (overwrite && tweens.TryGetValue(target, out library))
-                	{
-                		for (int j = 0; j < library.Count; j++)
-                			library[j].Cancel(props[i].Name);
-                	}
-                	
-                	var property = props[i];
-                    var info = new GlideInfo(target, property.Name);
-                    var to = new GlideInfo(values, property.Name, false);
-                    var lerper = CreateLerper(info.PropertyType);
-                    
-                    tween.AddLerp(lerper, info, info.Value, to.Value);
-                }
-
-                return tween;
-            }
-            
+	
+	        protected TweenerImpl()
+	        {
+	            tweens = new Dictionary<object, List<Tween>>();
+	            toRemove = new List<Tween>();
+	            toAdd = new List<Tween>();
+	            allTweens = new List<Tween>();
+	        }
+	        
+	        private static Dictionary<Type, ConstructorInfo> registeredLerpers;
+	        private Dictionary<object, List<Tween>> tweens;
+	        private List<Tween> toRemove, toAdd, allTweens;
+	
+	        /// <summary>
+	        /// <para>Tweens a set of properties on an object.</para>
+	        /// <para>To tween instance properties/fields, pass the object.</para>
+	        /// <para>To tween static properties/fields, pass the type of the object, using typeof(ObjectType) or object.GetType().</para>
+	        /// </summary>
+	        /// <param name="target">The object or type to tween.</param>
+	        /// <param name="values">The values to tween to, in an anonymous type ( new { prop1 = 100, prop2 = 0} ).</param>
+	        /// <param name="duration">Duration of the tween in seconds.</param>
+	        /// <param name="delay">Delay before the tween starts, in seconds.</param>
+	        /// <param name="overwrite">Whether pre-existing tweens should be overwritten if this tween involves the same properties.</param>
+	        /// <returns>The tween created, for setting properties on.</returns>
+	        public Tween Tween<T>(T target, object values, float duration, float delay = 0, bool overwrite = true) where T : class
+	        {
+	        	if (target == null)
+	        		throw new ArgumentNullException("target");
+	        	
+	        	//	Prevent tweening on structs if you cheat by casting target as Object
+	        	var targetType = target.GetType();
+	        	if (targetType.IsValueType)
+	        		throw new Exception("Target of tween cannot be a struct!");
+	        	
+	            var tween = new Tween(target, duration, delay, this);
+	            AddAndRemove();
+	        	toAdd.Add(tween);
+	
+	            if (values == null) // valid in case of manual timer
+	                return tween;
+	            
+	            var props = values.GetType().GetProperties();
+	            for (int i = 0; i < props.Length; ++i)
+	            {
+	            	List<Tween> library = null;
+	            	if (overwrite && tweens.TryGetValue(target, out library))
+	            	{
+	            		for (int j = 0; j < library.Count; j++)
+	            			library[j].Cancel(props[i].Name);
+	            	}
+	            	
+	            	var property = props[i];
+	                var info = new GlideInfo(target, property.Name);
+	                var to = new GlideInfo(values, property.Name, false);
+	                var lerper = CreateLerper(info.PropertyType);
+	                
+	                tween.AddLerp(lerper, info, info.Value, to.Value);
+	            }
+	
+	            return tween;
+	        }
+	        
+	        /// <summary>
+	        /// Starts a simple timer for setting up callback scheduling.
+	        /// </summary>
+	        /// <param name="duration">How long the timer will run for, in seconds.</param>
+	        /// <param name="delay">How long to wait before starting the timer, in seconds.</param>
+	        /// <returns>The tween created, for setting properties.</returns>
+	        public Tween Timer(float duration, float delay = 0)
+	        {
+	            var tween = new Tween(null, duration, delay, this);
+	            AddAndRemove();
+	        	toAdd.Add(tween);
+	            return tween;
+	        }
+	        
+	        /// <summary>
+	        /// Remove tweens from the tweener without calling their complete functions.
+	        /// </summary>
+	        public void Cancel()
+	        {
+	        	toRemove.AddRange(allTweens);
+	        }
+	
+	        /// <summary>
+	        /// Assign tweens their final value and remove them from the tweener.
+	        /// </summary>
+	        public void CancelAndComplete()
+	        {
+	        	for (int i = 0; i < allTweens.Count; ++i)
+	        		allTweens[i].CancelAndComplete();
+	        }
+	
+	        /// <summary>
+	        /// Set tweens to pause. They won't update and their delays won't tick down.
+	        /// </summary>
+	        public void Pause()
+	        {
+	        	for (int i = 0; i < allTweens.Count; ++i)
+	        	{
+	        		var tween = allTweens[i];
+	        		tween.Pause();
+	        	}
+	        }
+	
+	        /// <summary>
+	        /// Toggle tweens' paused value.
+	        /// </summary>
+	        public void PauseToggle()
+	        {
+	        	for (int i = 0; i < allTweens.Count; ++i)
+	        	{
+	        		var tween = allTweens[i];
+	        		tween.PauseToggle();
+	        	}
+	        }
+	
+	        /// <summary>
+	        /// Resumes tweens from a paused state.
+	        /// </summary>
+	        public void Resume()
+	        {
+	        	for (int i = 0; i < allTweens.Count; ++i)
+	        	{
+	        		var tween = allTweens[i];
+	        		tween.Resume();
+	        	}
+	        }
+	
+	        /// <summary>
+	        /// Updates the tweener and all objects it contains.
+	        /// </summary>
+	        /// <param name="secondsElapsed">Seconds elapsed since last update.</param>
+	        public void Update(float secondsElapsed)
+	        {
+	        	for (int i = 0; i < allTweens.Count; ++i)
+	        		allTweens[i].Update(secondsElapsed);
+	
+	            AddAndRemove();
+	        }
+	
 			private Lerper CreateLerper(Type propertyType)
 			{
 				ConstructorInfo lerper = null;
@@ -108,220 +192,138 @@ namespace Glide
 				
 				return (Lerper) lerper.Invoke(null);
 			}
-
-            /// <summary>
-            /// Starts a simple timer for setting up callback scheduling.
-            /// </summary>
-            /// <param name="duration">How long the timer will run for, in seconds.</param>
-            /// <param name="delay">How long to wait before starting the timer, in seconds.</param>
-            /// <returns>The tween created, for setting properties.</returns>
-            public Tween Timer(float duration, float delay = 0)
-            {
-                return Tween(_dummy, null, duration, delay);
-            }
-
-            /// <summary>
-            /// Remove tweens from the tweener without calling their complete functions.
-            /// </summary>
-            public void Cancel()
-            {
-            	toRemove.AddRange(allTweens);
-            }
-
-            /// <summary>
-            /// Assign tweens their final value and remove them from the tweener.
-            /// </summary>
-            public void CancelAndComplete()
-            {
-            	for (int i = 0; i < allTweens.Count; ++i)
-            	{
-            		var tween = allTweens[i];
-                    tween.time = tween.Duration;
-                    tween.update = null;
-                    toRemove.Add(tween);
-            	}
-            }
-
-            /// <summary>
-            /// Set tweens to pause. They won't update and their delays won't tick down.
-            /// </summary>
-            public void Pause()
-            {
-            	for (int i = 0; i < allTweens.Count; ++i)
-            	{
-            		var tween = allTweens[i];
-            		tween.Pause();
-            	}
-            }
-
-            /// <summary>
-            /// Toggle tweens' paused value.
-            /// </summary>
-            public void PauseToggle()
-            {
-            	for (int i = 0; i < allTweens.Count; ++i)
-            	{
-            		var tween = allTweens[i];
-            		tween.PauseToggle();
-            	}
-            }
-
-            /// <summary>
-            /// Resumes tweens from a paused state.
-            /// </summary>
-            public void Resume()
-            {
-            	for (int i = 0; i < allTweens.Count; ++i)
-            	{
-            		var tween = allTweens[i];
-            		tween.Resume();
-            	}
-            }
-
-            /// <summary>
-            /// Updates the tweener and all objects it contains.
-            /// </summary>
-            /// <param name="secondsElapsed">Seconds elapsed since last update.</param>
-            public void Update(float secondsElapsed)
-            {
-            	for (int i = 0; i < allTweens.Count; ++i)
-            		allTweens[i].Update(secondsElapsed);
-
-                AddAndRemove();
-            }
-
-            internal void Remove(Tween tween)
-            {
-                toRemove.Add(tween);
-            }
-
-            private void AddAndRemove()
-            {
-                for (int i = 0; i < toAdd.Count; ++i)
-                {
-                	var add = toAdd[i];
-                	List<Tween> list = null;
-                	if (!tweens.TryGetValue(add.Target, out list))
-                		tweens[add.Target] = list = new List<Tween>();
-
-                    list.Add(add);
-                    allTweens.Add(add);
-                }
-
-                for (int i = 0; i < toRemove.Count; ++i)
-                {
-                	var remove = toRemove[i];
-                    List<Tween> list;
-                    if (tweens.TryGetValue(remove.Target, out list))
-                    {
-                        list.Remove(remove);
-                        if (list.Count == 0)
-                        {
-                            tweens.Remove(remove.Target);
-                        }
-                    }
-                    
-                    allTweens.Remove(remove);
-                }
-
-                toAdd.Clear();
-                toRemove.Clear();
-            }
-
-            #region Bulk control
-            /// <summary>
-            /// Look up tweens by the objects they target, and cancel them.
-            /// </summary>
-            /// <param name="targets">The objects being tweened that you want to cancel.</param>
-            public void TargetCancel(params object[] targets)
-            {
-            	for (int i = 0; i < targets.Length; ++i)
-                {
-            		var target = targets[i];
-                    List<Tween> list;
-                    if (tweens.TryGetValue(target, out list))
-                    {
-                    	for (int j = 0; j < list.Count; ++j)
-                    		list[j].Cancel();
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Look up tweens by the objects they target, cancel them, set them to their final values, and call the complete callback.
-            /// </summary>
-            /// <param name="targets">The objects being tweened that you want to cancel and complete.</param>
-            public void TargetCancelAndComplete(params object[] targets)
-            {
-            	for (int i = 0; i < targets.Length; ++i)
-                {
-            		var target = targets[i];
-                    List<Tween> list;
-                    if (tweens.TryGetValue(target, out list))
-                    {
-                        for (int j = 0; j < list.Count; ++j)
-                        	list[j].CancelAndComplete();
-                    }
-                }
-            }
-
-
-            /// <summary>
-            /// Look up tweens by the objects they target, and pause them.
-            /// </summary>
-            /// <param name="targets">The objects being tweened that you want to pause.</param>
-            public void TargetPause(params object[] targets)
-            {
-            	for (int i = 0; i < targets.Length; ++i)
-                {
-            		var target = targets[i];
-                    List<Tween> list;
-                    if (tweens.TryGetValue(target, out list))
-                    {
-                        for (int j = 0; j < list.Count; ++j)
-                        	list[j].Pause();
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Look up tweens by the objects they target, and toggle their paused states.
-            /// </summary>
-            /// <param name="targets">The objects being tweened that you want to toggle pause.</param>
-            public void TargetPauseToggle(params object[] targets)
-            {
-            	for (int i = 0; i < targets.Length; ++i)
-                {
-            		var target = targets[i];
-                    List<Tween> list;
-                    if (tweens.TryGetValue(target, out list))
-                    {
-                        for (int j = 0; j < list.Count; ++j)
-                        	list[j].PauseToggle();
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Look up tweens by the objects they target, and resume them from paused.
-            /// </summary>
-            /// <param name="targets">The objects being tweened that you want to resume.</param>
-            public void TargetResume(params object[] targets)
-            {
-            	for (int i = 0; i < targets.Length; ++i)
-                {
-            		var target = targets[i];
-                    List<Tween> list;
-                    if (tweens.TryGetValue(target, out list))
-                    {
-                        for (int j = 0; j < list.Count; ++j)
-                        	list[j].Resume();
-                    }
-                }
-            }
-
-            #endregion
-            
+	
+	        void IRemoveTweens.Remove(Tween tween)
+	        {
+	            toRemove.Add(tween);
+	        }
+	
+	        private void AddAndRemove()
+	        {
+	            for (int i = 0; i < toAdd.Count; ++i)
+	            {
+	            	var tween = toAdd[i];
+	                allTweens.Add(tween);
+	            	if (tween.Target == null) continue;	//	don't sort timers by target
+	            	
+	            	List<Tween> list = null;
+	            	if (!tweens.TryGetValue(tween.Target, out list))
+	            		tweens[tween.Target] = list = new List<Tween>();
+	
+	                list.Add(tween);
+	            }
+	
+	            for (int i = 0; i < toRemove.Count; ++i)
+	            {
+	            	var tween = toRemove[i];
+	                allTweens.Remove(tween);
+	                if (tween.Target == null) continue; // see above
+	                
+	                List<Tween> list = null;
+	                if (tweens.TryGetValue(tween.Target, out list))
+	                {
+	                    list.Remove(tween);
+	                    if (list.Count == 0)
+	                    {
+	                        tweens.Remove(tween.Target);
+	                    }
+	                }
+	                
+	                allTweens.Remove(tween);
+	            }
+	
+	            toAdd.Clear();
+	            toRemove.Clear();
+	        }
+	
+	        #region Target control
+	        /// <summary>
+	        /// Cancel all tweens with the given target.
+	        /// </summary>
+	        /// <param name="target">The object being tweened that you want to cancel.</param>
+	        public void TargetCancel(object target)
+	        {
+	            List<Tween> list;
+	            if (tweens.TryGetValue(target, out list))
+	            {
+	            	for (int i = 0; i < list.Count; ++i)
+	            		list[i].Cancel();
+	            }
+	        }
+	        
+	        /// <summary>
+	        /// Cancel tweening named properties on the given target.
+	        /// </summary>
+	        /// <param name="target">The object being tweened that you want to cancel properties on.</param>
+	        /// <param name="properties">The properties to cancel.</param>
+	        public void TargetCancel(object target, params string[] properties)
+	        {
+	            List<Tween> list;
+	            if (tweens.TryGetValue(target, out list))
+	            {
+	            	for (int i = 0; i < list.Count; ++i)
+	            		list[i].Cancel(properties);
+	            }
+	        }
+	
+	        /// <summary>
+	        /// Cancel, complete, and call complete callbacks for all tweens with the given target..
+	        /// </summary>
+	        /// <param name="target">The object being tweened that you want to cancel and complete.</param>
+	        public void TargetCancelAndComplete(object target)
+	        {
+	            List<Tween> list;
+	            if (tweens.TryGetValue(target, out list))
+	            {
+	                for (int i = 0; i < list.Count; ++i)
+	                	list[i].CancelAndComplete();
+	            }
+	        }
+	
+	
+	        /// <summary>
+	        /// Pause all tweens with the given target.
+	        /// </summary>
+	        /// <param name="target">The object being tweened that you want to pause.</param>
+	        public void TargetPause(object target)
+	        {
+	            List<Tween> list;
+	            if (tweens.TryGetValue(target, out list))
+	            {
+	                for (int i = 0; i < list.Count; ++i)
+	                	list[i].Pause();
+	            }
+	        }
+	
+	        /// <summary>
+	        /// Toggle the pause state of all tweens with the given target.
+	        /// </summary>
+	        /// <param name="target">The object being tweened that you want to toggle pause.</param>
+	        public void TargetPauseToggle(object target)
+	        {
+	            List<Tween> list;
+	            if (tweens.TryGetValue(target, out list))
+	            {
+	                for (int i = 0; i < list.Count; ++i)
+	                	list[i].PauseToggle();
+	            }
+	        }
+	
+	        /// <summary>
+	        /// Resume all tweens with the given target.
+	        /// </summary>
+	        /// <param name="target">The object being tweened that you want to resume.</param>
+	        public void TargetResume(object target)
+	        {
+	            List<Tween> list;
+	            if (tweens.TryGetValue(target, out list))
+	            {
+	                for (int i = 0; i < list.Count; ++i)
+	                	list[i].Resume();
+	            }
+	        }
+	        #endregion
+	        
 			private class NumericLerper : Lerper
 			{
 				float from, to, range;
@@ -372,7 +374,7 @@ namespace Glide
 					var type = current.GetType();
 					return Convert.ChangeType(value, type);
 				}
-			}
-        }
-    }
+	        }
+	    }
+	}
 }
