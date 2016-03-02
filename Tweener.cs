@@ -38,7 +38,7 @@ namespace Glide
 	        /// Associate a Lerper class with a property type.
 	        /// </summary>
 	        /// <typeparam name="TLerper">The Lerper class to use for properties of the given type.</typeparam>
-	        /// <param name="type">The type of the property to associate the given Lerper with.</param>
+	        /// <param name="propertyType">The type of the property to associate the given Lerper with.</param>
 	        public static void SetLerper<TLerper>(Type propertyType) where TLerper : Lerper, new()
 			{
 	        	registeredLerpers[propertyType] = typeof(TLerper).GetConstructor(Type.EmptyTypes);
