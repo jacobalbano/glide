@@ -78,8 +78,7 @@ namespace Glide
 	        		throw new Exception("Target of tween cannot be a struct!");
 	        	
 	            var tween = new Tween(target, duration, delay, this);
-	            AddAndRemove();
-	        	toAdd.Add(tween);
+	            toAdd.Add(tween);
 	
 	            if (values == null) // valid in case of manual timer
 	                return tween;
@@ -102,6 +101,7 @@ namespace Glide
 	                tween.AddLerp(lerper, info, info.Value, to.Value);
 	            }
 	
+	        	AddAndRemove();
 	            return tween;
 	        }
 	        
