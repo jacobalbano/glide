@@ -29,10 +29,10 @@ namespace Glide
 		
 		private bool firstUpdate;
         private int repeatCount, timesRepeated;
-        private Lerper.Behavior behavior;
+        private MemberLerper.Behavior behavior;
         
-        private List<GlideInfo> vars;
-        private List<Lerper> lerpers;
+        private List<MemberAccessor> vars;
+        private List<MemberLerper> lerpers;
         private List<object> start, end;
         private Dictionary<string, int> varHash;
         private TweenerImpl Parent;
@@ -69,16 +69,16 @@ namespace Glide
 			firstUpdate = true;
 			
 			varHash = new Dictionary<string, int>();
-			vars = new List<GlideInfo>();
-			lerpers = new List<Lerper>();
+			vars = new List<MemberAccessor>();
+			lerpers = new List<MemberLerper>();
 			start = new List<object>();
 			end = new List<object>();
-			behavior = Lerper.Behavior.None;
+			behavior = MemberLerper.Behavior.None;
 		}
 
-		private void AddLerp(Lerper lerper, GlideInfo info, object from, object to)
+		private void AddLerp(MemberLerper lerper, MemberAccessor info, object from, object to)
 		{
-			varHash.Add(info.PropertyName, vars.Count);
+			varHash.Add(info.MemberName, vars.Count);
 			vars.Add(info);
 			
 			start.Add(from);
@@ -157,7 +157,7 @@ namespace Glide
 				
 				//	If the timer is zero here, we just restarted.
 				//	If reflect mode is on, flip start to end
-				if (time == 0 && behavior.HasFlag(Lerper.Behavior.Reflect))
+				if (time == 0 && (behavior & MemberLerper.Behavior.Reflect) == MemberLerper.Behavior.Reflect)
 					Reverse();
 				
 				if (update != null)
@@ -190,7 +190,7 @@ namespace Glide
 				}
 				
 				//	if we aren't tweening this value, just set it
-				var info = new GlideInfo(Target, property.Name, true);
+				var info = new MemberAccessor(Target, property.Name, true);
 				info.Value = propValue;
 			}
 			
@@ -273,7 +273,7 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween Reflect()
 		{
-			behavior |= Lerper.Behavior.Reflect;
+			behavior |= MemberLerper.Behavior.Reflect;
 			return this;
 		}
 		
@@ -305,8 +305,8 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween Rotation(RotationUnit unit = RotationUnit.Degrees)
 		{
-			behavior |= Lerper.Behavior.Rotation;
-			behavior |= (unit == RotationUnit.Degrees) ? Lerper.Behavior.RotationDegrees : Lerper.Behavior.RotationRadians;
+			behavior |= MemberLerper.Behavior.Rotation;
+			behavior |= (unit == RotationUnit.Degrees) ? MemberLerper.Behavior.RotationDegrees : MemberLerper.Behavior.RotationRadians;
 
 			return this;
 		}
@@ -317,7 +317,7 @@ namespace Glide
 		/// <returns>A reference to this.</returns>
 		public Tween Round()
 		{
-			behavior |= Lerper.Behavior.Round;
+			behavior |= MemberLerper.Behavior.Round;
 			return this;
 		}
 #endregion

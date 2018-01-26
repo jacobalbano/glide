@@ -2,7 +2,7 @@
 
 namespace Glide
 {
-	public abstract class Lerper
+	public abstract class MemberLerper
 	{
 		[Flags]
 		public enum Behavior

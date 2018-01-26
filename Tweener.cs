@@ -39,7 +39,7 @@ namespace Glide
 	        /// </summary>
 	        /// <typeparam name="TLerper">The Lerper class to use for properties of the given type.</typeparam>
 	        /// <param name="propertyType">The type of the property to associate the given Lerper with.</param>
-	        public static void SetLerper<TLerper>(Type propertyType) where TLerper : Lerper, new()
+	        public static void SetLerper<TLerper>(Type propertyType) where TLerper : MemberLerper, new()
 			{
 	        	SetLerper(typeof(TLerper), propertyType);
 			}
@@ -104,9 +104,9 @@ namespace Glide
 	            	}
 	            	
 	            	var property = props[i];
-	                var info = new GlideInfo(target, property.Name);
-	                var to = new GlideInfo(values, property.Name, false);
-	                var lerper = CreateLerper(info.PropertyType);
+	                var info = new MemberAccessor(target, property.Name);
+	                var to = new MemberAccessor(values, property.Name, false);
+	                var lerper = CreateLerper(info.MemberType);
 	                
 	                tween.AddLerp(lerper, info, info.Value, to.Value);
 	            }
@@ -194,13 +194,13 @@ namespace Glide
 	            AddAndRemove();
 	        }
 	
-			private Lerper CreateLerper(Type propertyType)
+			private MemberLerper CreateLerper(Type propertyType)
 			{
 				ConstructorInfo lerper = null;
 				if (!registeredLerpers.TryGetValue(propertyType, out lerper))
 					throw new Exception(string.Format("No Lerper found for type {0}.", propertyType.FullName));
 				
-				return (Lerper) lerper.Invoke(null);
+				return (MemberLerper) lerper.Invoke(null);
 			}
 	
 	        void IRemoveTweens.Remove(Tween tween)
@@ -334,7 +334,7 @@ namespace Glide
 	        }
 	        #endregion
 	        
-			private class NumericLerper : Lerper
+			private class NumericLerper : MemberLerper
 			{
 				float from, to, range;
 				
@@ -344,10 +344,10 @@ namespace Glide
 					to = Convert.ToSingle(toValue);
 					range = to - from;
 					
-					if (behavior.HasFlag(Behavior.Rotation))
+					if ((behavior & Behavior.Rotation) == Behavior.Rotation)
 					{
 						float angle = from;
-						if (behavior.HasFlag(Behavior.RotationRadians))
+						if ((behavior & Behavior.RotationRadians) == Behavior.RotationRadians)
 							angle *= DEG;
 						
 						if (angle < 0)
@@ -365,9 +365,9 @@ namespace Glide
 				public override object Interpolate(float t, object current, Behavior behavior)
 				{
 					var value = from + range * t;
-					if (behavior.HasFlag(Behavior.Rotation))
+					if ((behavior & Behavior.Rotation) == Behavior.Rotation)
 					{
-						if (behavior.HasFlag(Behavior.RotationRadians))
+						if ((behavior & Behavior.RotationRadians) == Behavior.RotationRadians)
 							value *= DEG;
 						
 						value %= 360.0f;
@@ -375,11 +375,12 @@ namespace Glide
 						if (value < 0)
 							value += 360.0f;
 						
-						if (behavior.HasFlag(Behavior.RotationRadians))
+						if ((behavior & Behavior.RotationRadians) == Behavior.RotationRadians)
 							value *= RAD;
 					}
 					
-					if (behavior.HasFlag(Behavior.Round)) value = (float) Math.Round(value);
+					if ((behavior & Behavior.Round) == Behavior.Round)
+                        value = (float) Math.Round(value);
 					
 					var type = current.GetType();
 					return Convert.ChangeType(value, type);
