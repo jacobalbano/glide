@@ -22,6 +22,7 @@ namespace Glide
             var T = target.GetType();
             PropertyInfo propInfo = null;
             FieldInfo fieldInfo = null;
+			Target = target;
 
             if ((propInfo = T.GetProperty(name, flags)) != null)
             {
